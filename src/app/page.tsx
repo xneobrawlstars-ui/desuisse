@@ -107,8 +107,21 @@ function Carousel({ items, renderItem, visibleCount = 3 }: {
 // ── Category Carousel ─────────────────────────────────────────
 function CategoryCarousel({ categories }: { categories: { key: string; label: string; img: string; href: string }[] }) {
   const [index, setIndex] = useState(0);
-  const visibleCount = 3;
-  const max = Math.max(0, categories.length - visibleCount);
+  const [visible, setVisible] = useState(3);
+
+  useEffect(() => {
+    const update = () => {
+      if (window.innerWidth < 480) setVisible(1);
+      else if (window.innerWidth < 768) setVisible(2);
+      else setVisible(3);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  const max = Math.max(0, categories.length - visible);
+  const safeIndex = Math.min(index, max);
 
   const prev = () => setIndex(i => Math.max(0, i - 1));
   const next = () => setIndex(i => Math.min(max, i + 1));
@@ -116,7 +129,7 @@ function CategoryCarousel({ categories }: { categories: { key: string; label: st
   const ArrowBtn = ({ dir, onClick, disabled }: { dir: 'left' | 'right'; onClick: () => void; disabled: boolean }) => (
     <button onClick={onClick} disabled={disabled} style={{
       width: 44, height: 44, borderRadius: '50%',
-      border: '1px solid #e8e0d4',
+      border: `1px solid ${disabled ? '#e8e0d4' : '#1a0a0a'}`,
       background: disabled ? '#f7f3ee' : '#fff',
       color: disabled ? '#ccc' : '#1a0a0a',
       cursor: disabled ? 'default' : 'pointer',
@@ -135,27 +148,32 @@ function CategoryCarousel({ categories }: { categories: { key: string; label: st
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginBottom: 20 }}>
-        <ArrowBtn dir="left" onClick={prev} disabled={index === 0} />
-        <ArrowBtn dir="right" onClick={next} disabled={index >= max} />
+        <ArrowBtn dir="left" onClick={prev} disabled={safeIndex === 0} />
+        <ArrowBtn dir="right" onClick={next} disabled={safeIndex >= max} />
       </div>
       <div style={{ overflow: 'hidden' }}>
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${categories.length}, calc(${100 / visibleCount}% - ${(visibleCount - 1) * 16 / visibleCount}px))`,
+          display: 'flex',
           gap: 16,
-          transform: `translateX(calc(-${index} * (${100 / visibleCount}% + ${16 / visibleCount}px)))`,
+          transform: `translateX(calc(-${safeIndex} * (${100 / visible}% + ${16 / visible}px)))`,
           transition: 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
         }}>
           {categories.map((cat) => (
-            <Link key={cat.key} href={cat.href} className="cat-card" style={{ display: 'block', textDecoration: 'none', position: 'relative' }}>
-              <div style={{ overflow: 'hidden', position: 'relative', aspectRatio: '430/538' }}>
-                <Image src={cat.img} alt={cat.label} fill
-                  style={{ objectFit: 'cover', transition: 'transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94)' }}
-                  className="cat-img" unoptimized />
+            <Link key={cat.key} href={cat.href} className="cat-card" style={{
+              display: 'block', textDecoration: 'none', position: 'relative', flexShrink: 0,
+              width: `calc(${100 / visible}% - ${(visible - 1) * 16 / visible}px)`,
+            }}>
+              <div style={{ overflow: 'hidden', position: 'relative', aspectRatio: '430/538', background: '#f7f3ee' }}>
+                {/* Native img tag — bypasses Next.js image proxy, works on all mobile browsers */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={cat.img} alt={cat.label} loading="lazy"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94)' }}
+                  className="cat-img"
+                />
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,10,10,0)', transition: 'background 0.4s' }} className="cat-overlay" />
               </div>
-              <div style={{ padding: '14px 0 6px', textAlign: 'center' }}>
-                <h3 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.3rem', fontWeight: 400, color: '#1a0a0a', letterSpacing: '0.04em' }}>
+              <div style={{ padding: '12px 0 6px', textAlign: 'center' }}>
+                <h3 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.2rem', fontWeight: 400, color: '#1a0a0a', letterSpacing: '0.04em' }}>
                   {cat.label}
                 </h3>
               </div>
@@ -342,12 +360,21 @@ export default function HomePage() {
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #1a0a0a 0%, #3d1a1a 50%, #6b0f1a 100%)', zIndex: -1 }} />
         {/* Hero content */}
         <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#fff', padding: '0 40px' }}>
-          <p className="fade-up" style={{ fontFamily: 'Montserrat', fontSize: 11, letterSpacing: '0.5em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 20 }}>
+          <p className="fade-up" style={{ fontFamily: 'Montserrat', fontSize: 11, letterSpacing: '0.5em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 28 }}>
             {t.hero.tag}
           </p>
-          <h1 className="fade-up fade-up-delay-1" style={{ fontFamily: 'Cormorant Garamond', fontSize: 'clamp(3.5rem, 9vw, 8rem)', fontWeight: 300, letterSpacing: '0.12em', lineHeight: 1, marginBottom: 40, textShadow: '0 2px 30px rgba(0,0,0,0.4)' }}>
-            {t.hero.title}
-          </h1>
+          {/* White logo instead of text */}
+          <div className="fade-up fade-up-delay-1" style={{ marginBottom: 48 }}>
+            <Image
+              src="https://desuisse.com/wp-content/uploads/2023/02/desuisselogo-2.png"
+              alt="DeSuisse"
+              width={420}
+              height={120}
+              style={{ objectFit: 'contain', width: 'clamp(220px, 35vw, 420px)', height: 'auto', filter: 'brightness(0) invert(1)', opacity: 0.95 }}
+              priority
+              unoptimized
+            />
+          </div>
           <Link href="/shop" className="btn-gold fade-up fade-up-delay-2" style={{ display: 'inline-block', fontSize: 12, letterSpacing: '0.25em' }}>
             {t.hero.cta}
           </Link>
@@ -401,7 +428,8 @@ export default function HomePage() {
           ].map((col, i) => (
             <Reveal key={i} delay={i * 120}>
               <div className="collection-card" style={{ height: 500 }}>
-                <Image src={col.src} alt={col.label} fill style={{ objectFit: 'cover' }} unoptimized />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={col.src} alt={col.label} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,10,10,0.35)', transition: 'background 0.4s' }} className="col-overlay" />
                 <div className="collection-label">{col.label}</div>
               </div>
