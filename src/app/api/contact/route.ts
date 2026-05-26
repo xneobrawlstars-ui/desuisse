@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const submissions = new Map<string, { count: number; firstAt: number }>();
 const MAX = 3;
-const WINDOW = 3_600_000; // 1 hour
+const WINDOW = 3_600_000;
 
 function getIp(req: NextRequest) {
   return req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
@@ -17,8 +17,31 @@ function isValidEmail(e: string): boolean {
   return /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(e);
 }
 
+async function sendEmail(subject: string, html: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const toEmail = process.env.CONTACT_EMAIL ?? 'info@desuisse.com';
+
+  if (!apiKey) {
+    console.log('[email] RESEND_API_KEY not set — email not sent');
+    return;
+  }
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'DeSuisse Website <noreply@resend.dev>',
+      to: [toEmail],
+      subject,
+      html,
+    }),
+  });
+}
+
 export async function POST(req: NextRequest) {
-  // Reject non-JSON
   const ct = req.headers.get('content-type') ?? '';
   if (!ct.includes('application/json')) {
     return NextResponse.json({ error: 'Invalid content type' }, { status: 415 });
@@ -26,12 +49,11 @@ export async function POST(req: NextRequest) {
 
   const ip  = getIp(req);
   const now = Date.now();
-
   const state = submissions.get(ip);
+
   if (state && now - state.firstAt < WINDOW && state.count >= MAX) {
     return NextResponse.json({ error: 'Too many submissions. Try again later.' }, {
-      status: 429,
-      headers: { 'Retry-After': '3600' },
+      status: 429, headers: { 'Retry-After': '3600' },
     });
   }
 
@@ -44,30 +66,57 @@ export async function POST(req: NextRequest) {
   }
 
   const b = body as Record<string, unknown>;
-
   const name    = sanitize(b.name, 100);
   const email   = sanitize(b.email, 254).toLowerCase();
   const phone   = typeof b.phone === 'string' ? b.phone.slice(0, 20).replace(/[^0-9+\-\s()]/g, '') : '';
   const company = sanitize(b.company, 100);
   const message = sanitize(b.message, 2000);
+  // Detect if this is a meeting request or contact form
+  const type    = sanitize(b.type, 20) || 'contact';
 
   if (!name)                return NextResponse.json({ error: 'Name required' }, { status: 400 });
   if (!isValidEmail(email)) return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
-  if (!message || message.length < 5) return NextResponse.json({ error: 'Message too short' }, { status: 400 });
+  if (!message || message.length < 2) return NextResponse.json({ error: 'Message too short' }, { status: 400 });
 
   submissions.set(ip, {
     count: (!state || now - state.firstAt > WINDOW) ? 1 : state.count + 1,
     firstAt: (!state || now - state.firstAt > WINDOW) ? now : state.firstAt,
   });
 
-  // TODO: send email via Resend/SendGrid
-  // import { Resend } from 'resend';
-  // await new Resend(process.env.RESEND_API_KEY).emails.send({
-  //   from: 'noreply@desuisse.com',
-  //   to: 'info@desuisse.com',
-  //   subject: `Contact from ${name}`,
-  //   text: `From: ${name} <${email}>\nPhone: ${phone}\nCompany: ${company}\n\n${message}`,
-  // });
+  const isMeeting = type === 'meeting';
+  const subject = isMeeting
+    ? `📅 New Meeting Request — ${name}`
+    : `✉️ New Contact Message — ${name}`;
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px">
+      <div style="background:#1a0a0a;padding:20px 24px;margin-bottom:24px">
+        <h1 style="color:#c9a84c;margin:0;font-size:20px;font-weight:400;letter-spacing:2px">
+          ${isMeeting ? 'MEETING REQUEST' : 'CONTACT MESSAGE'}
+        </h1>
+        <p style="color:#888;margin:6px 0 0;font-size:12px">DeSuisse Website</p>
+      </div>
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#888;font-size:12px;width:100px">NAME</td>
+            <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#1a0a0a"><strong>${name}</strong></td></tr>
+        <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#888;font-size:12px">EMAIL</td>
+            <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px"><a href="mailto:${email}" style="color:#c9a84c">${email}</a></td></tr>
+        ${phone ? `<tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#888;font-size:12px">PHONE</td>
+            <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#1a0a0a">${phone}</td></tr>` : ''}
+        ${company ? `<tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#888;font-size:12px">COMPANY</td>
+            <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#1a0a0a">${company}</td></tr>` : ''}
+      </table>
+      <div style="margin-top:24px;padding:16px;background:#f7f3ee;border-left:3px solid #c9a84c">
+        <p style="margin:0 0 8px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px">MESSAGE</p>
+        <p style="margin:0;font-size:14px;color:#1a0a0a;line-height:1.7">${message.replace(/\n/g, '<br>')}</p>
+      </div>
+      <p style="margin-top:24px;font-size:11px;color:#bbb;text-align:center">
+        Sent from desuisse.com — Reply directly to <a href="mailto:${email}" style="color:#c9a84c">${email}</a>
+      </p>
+    </div>
+  `;
+
+  await sendEmail(subject, html);
 
   return NextResponse.json({ success: true }, { status: 200 });
 }

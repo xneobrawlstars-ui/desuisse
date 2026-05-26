@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getProducts, Product } from '@/data/products';
+import { fetchProducts, Product } from '@/data/products';
 
 interface Props {
   open: boolean;
@@ -19,7 +19,7 @@ export default function SearchOverlay({ open, onClose }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setAllProducts(getProducts());
+    fetchProducts().then(setAllProducts);
   }, []);
 
   useEffect(() => {

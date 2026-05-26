@@ -6,7 +6,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getProducts, Product, MATERIAL_OPTIONS, CATEGORIES } from '@/data/products';
+import { fetchProducts, Product, MATERIAL_OPTIONS, CATEGORIES } from '@/data/products';
 
 type SortOption = 'default' | 'price-asc' | 'price-desc' | 'name-asc';
 
@@ -41,12 +41,13 @@ export default function ShopContent() {
   };
 
   useEffect(() => {
-    const all = getProducts();
-    setProducts(all);
-    const max = Math.max(...all.map(p => p.priceMax || p.price), 1000);
-    const rounded = Math.ceil(max / 100) * 100;
-    setMaxPrice(rounded);
-    setPriceRange([0, rounded]);
+    fetchProducts().then(all => {
+      setProducts(all);
+      const max = Math.max(...all.map(p => p.priceMax || p.price), 1000);
+      const rounded = Math.ceil(max / 100) * 100;
+      setMaxPrice(rounded);
+      setPriceRange([0, rounded]);
+    });
     const cat = searchParams.get('category');
     const validCategories = ['all', 'everyday-rings', 'engagement-rings', 'wedding-rings', 'earrings', 'bracelets', 'necklaces'];
     if (cat && validCategories.includes(cat)) setActiveCategory(cat);

@@ -7,7 +7,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getProducts, Product, CATEGORIES } from '@/data/products';
+import { fetchProducts, Product, CATEGORIES } from '@/data/products';
 
 // ── Parallax hook ─────────────────────────────────────────────
 function useParallax(speed = 0.4) {
@@ -300,8 +300,9 @@ export default function HomePage() {
   const parallax = useParallax(0.35);
 
   useEffect(() => {
-    const products = getProducts();
-    setFeaturedProducts(products.filter(p => p.featured));
+    fetchProducts().then(products => {
+      setFeaturedProducts(products.filter(p => p.featured));
+    });
   }, []);
 
   const categories = [

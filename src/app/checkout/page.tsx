@@ -168,7 +168,7 @@ export default function CheckoutPage() {
               </div>
               <div style={{ marginBottom: 32 }}>
                 <label style={labelStyle}>{t.phone}</label>
-                <input type="tel" style={inputStyle} value={info.phone} onChange={e => setInfo({ ...info, phone: e.target.value })} onFocus={onFocus} onBlur={onBlur} placeholder="+383 44 000 000" />
+                <input type="tel" inputMode="tel" pattern="[0-9+\-\s()]+" style={inputStyle} value={info.phone} onChange={e => setInfo({ ...info, phone: e.target.value.replace(/[^0-9+\-\s()]/g, '') })} onFocus={onFocus} onBlur={onBlur} placeholder="+383 44 000 000" />
               </div>
               <button className="btn-dark" onClick={() => {
                 setStepError('');

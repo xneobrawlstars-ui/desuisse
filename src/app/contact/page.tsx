@@ -105,11 +105,11 @@ export default function ContactPage() {
                 required
               />
               <input
-                type="tel"
+                type="tel" inputMode="tel" pattern="[0-9+\-\s()]+"
                 placeholder={t.contact.phone}
                 className="ds-input"
                 value={form.phone}
-                onChange={e => setForm({ ...form, phone: e.target.value })}
+                onChange={e => setForm({ ...form, phone: e.target.value.replace(/[^0-9+\-\s()]/g, '') })}
                 maxLength={LIMITS.PHONE}
               />
               <input

@@ -10,7 +10,7 @@ import ProductCard from '@/components/ProductCard';
 import { useWishlist } from '@/lib/WishlistContext';
 import { useCart } from '@/lib/CartContext';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getProducts, Product, formatPrice, CATEGORIES, ENGRAVING_SYMBOLS } from '@/data/products';
+import { fetchProducts, Product, formatPrice, CATEGORIES, ENGRAVING_SYMBOLS } from '@/data/products';
 import { sanitizeEngraving } from '@/lib/security';
 
 // ── Engraving section ────────────────────────────────────────
@@ -311,12 +311,13 @@ export default function ProductPage() {
   const wishlisted = product ? isWishlisted(product.id) : false;
 
   useEffect(() => {
-    const all = getProducts();
-    const found = all.find(p => p.id === id);
-    if (found) {
-      setProduct(found);
-      setRelated(all.filter(p => p.category === found.category && p.id !== found.id).slice(0, 4));
-    }
+    fetchProducts().then(all => {
+      const found = all.find(p => p.id === id);
+      if (found) {
+        setProduct(found);
+        setRelated(all.filter(p => p.category === found.category && p.id !== found.id).slice(0, 4));
+      }
+    });
   }, [id]);
 
   if (!product) return (
@@ -577,10 +578,10 @@ export default function ProductPage() {
               {language === 'sq' ? 'Na kontaktoni dhe do të caktojmë një takim personal në dyqanin tonë.' : 'Contact us and we will arrange a personal appointment at our boutique in Karlovy Vary.'}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <input type="text" placeholder={language === 'sq' ? 'Emri juaj' : 'Your name'} style={{ padding: '12px 16px', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 13, outline: 'none' }} />
-              <input type="email" placeholder="Email" style={{ padding: '12px 16px', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 13, outline: 'none' }} />
-              <input type="tel" placeholder={language === 'sq' ? 'Telefon' : 'Phone'} style={{ padding: '12px 16px', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 13, outline: 'none' }} />
-              <textarea rows={3} placeholder={language === 'sq' ? 'Mesazhi (opsional)' : 'Message (optional)'} style={{ padding: '12px 16px', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 13, outline: 'none', resize: 'vertical' }} />
+              <input type="text" placeholder={language === 'sq' ? 'Emri juaj' : 'Your name'} className="schedule-name" style={{ padding: '12px 16px', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 13, outline: 'none' }} />
+              <input type="email" placeholder="Email" className="schedule-email" style={{ padding: '12px 16px', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 13, outline: 'none' }} />
+              <input type="tel" placeholder={language === 'sq' ? 'Telefon' : 'Phone'} className="schedule-phone" style={{ padding: '12px 16px', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 13, outline: 'none' }} />
+              <textarea rows={3} placeholder={language === 'sq' ? 'Mesazhi (opsional)' : 'Message (optional)'} className="schedule-msg" style={{ padding: '12px 16px', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 13, outline: 'none', resize: 'vertical' }} />
               <button onClick={() => { alert(language === 'sq' ? 'Faleminderit! Do t\'ju kontaktojmë së shpejti.' : 'Thank you! We will contact you shortly.'); setScheduleModal(false); }} style={{ padding: '14px', background: '#1a0a0a', color: '#fff', border: 'none', fontFamily: 'Montserrat', fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', cursor: 'pointer' }}>
                 {language === 'sq' ? 'DËRGO KËRKESËN' : 'SEND REQUEST'}
               </button>

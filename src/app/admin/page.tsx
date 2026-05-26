@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getProducts, saveProducts, Product, DEFAULT_PRODUCTS, MATERIAL_OPTIONS, RING_SIZES, BRACELET_SIZES, NECKLACE_SIZES, CARATS, STONE_OPTIONS, STONE_SIZE_OPTIONS, CATEGORIES, MaterialVariant } from '@/data/products';
+import { fetchProducts, saveProductsToDb, saveProducts, Product, DEFAULT_PRODUCTS, MATERIAL_OPTIONS, RING_SIZES, BRACELET_SIZES, NECKLACE_SIZES, CARATS, STONE_OPTIONS, STONE_SIZE_OPTIONS, CATEGORIES, MaterialVariant } from '@/data/products';
 import {
   sanitizeText, sanitizeUrl, sanitizeNumber, isValidProduct,
   isRateLimited, recordAttempt, clearRateLimit, formatLockoutTime,
@@ -65,10 +65,11 @@ export default function AdminPage() {
       }
     }
 
-    // Load and validate products from localStorage
-    const raw = getProducts();
-    const validated = raw.filter(isValidProduct);
-    setProducts(validated);
+    // Load products from database (falls back to localStorage)
+    fetchProducts().then(products => {
+      const validated = products.filter(isValidProduct);
+      setProducts(validated.length > 0 ? validated : []);
+    });
     setLockoutInfo(isRateLimited(RATE_KEY));
   }, []);
 
@@ -253,7 +254,10 @@ export default function AdminPage() {
       return;
     }
     setProducts(updated);
-    saveProducts(updated);
+    // Save to database (Vercel KV) — falls back to localStorage
+    saveProductsToDb(updated).then(ok => {
+      if (!ok) saveProducts(updated); // localStorage fallback
+    });
     setIsAdding(false);
     setEditing(null);
     setSaved(true);
@@ -264,14 +268,18 @@ export default function AdminPage() {
     if (!confirm(t.admin.confirmDelete)) return;
     const updated = products.filter(p => p.id !== id);
     setProducts(updated);
-    saveProducts(updated);
+    saveProductsToDb(updated).then(ok => {
+      if (!ok) saveProducts(updated);
+    });
     if (editing?.id === id) setEditing(null);
   };
 
   const handleReset = () => {
     if (!confirm('Reset all products to defaults?')) return;
     setProducts(DEFAULT_PRODUCTS);
-    saveProducts(DEFAULT_PRODUCTS);
+    saveProductsToDb(DEFAULT_PRODUCTS).then(ok => {
+      if (!ok) saveProducts(DEFAULT_PRODUCTS);
+    });
     setEditing(null);
     setIsAdding(false);
   };
