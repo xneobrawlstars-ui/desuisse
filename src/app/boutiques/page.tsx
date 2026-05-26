@@ -45,7 +45,7 @@ export default function BoutiquesPage() {
       hours: language === 'sq' ? 'E Hënë – E Diel: 10:00 – 19:00' : 'Monday – Sunday: 10:00 – 19:00',
       mapUrl: 'https://maps.app.goo.gl/fN3hvrF5KonRYa966',
       website: 'https://artdesuisse.com',
-      image: '/images/boutique-1.jpg',
+      image: 'public/images/art1.jpg',
     },
     {
       name: 'Art de Suisse II',
@@ -55,7 +55,7 @@ export default function BoutiquesPage() {
       hours: language === 'sq' ? 'E Hënë – E Diel: 10:00 – 19:00' : 'Monday – Sunday: 10:00 – 19:00',
       mapUrl: '',
       website: 'https://artdesuisse.com',
-      image: '/images/boutique-2.jpg',
+      image: 'public/images/art2.jpg',
     },
     {
       name: 'Art de Suisse III',
@@ -65,7 +65,7 @@ export default function BoutiquesPage() {
       hours: language === 'sq' ? 'E Hënë – E Diel: 10:00 – 19:00' : 'Monday – Sunday: 10:00 – 19:00',
       mapUrl: '',
       website: 'https://artdesuisse.com',
-      image: '/images/boutique-3.jpg',
+      image: 'public/images/art3.webp',
     },
     {
       name: 'Chopard Boutique',
@@ -75,7 +75,7 @@ export default function BoutiquesPage() {
       hours: language === 'sq' ? 'E Hënë – E Diel: 10:00 – 19:00' : 'Monday – Sunday: 10:00 – 19:00',
       mapUrl: '',
       website: 'https://artdesuisse.com',
-      image: '/images/boutique-4.jpg',
+      image: 'public/images/chop4.jpg',
     },
     {
       name: 'DeSuisse',
