@@ -12,10 +12,10 @@ export const translations = {
       cart: 'Cart',
       search: 'Search',
     },
-    banner: 'Diamond Week is Coming. Prep your wishlist.',
+    
     hero: {
       tag: 'NEW IN',
-      title: 'DIAMOND WEEK',
+      title: '',
       cta: 'SHOP NOW',
     },
     home: {
@@ -152,10 +152,10 @@ At the age of 16, Bajram Sahatciu, as the first in the family, received an educa
       cart: 'Shporta',
       search: 'Kërko',
     },
-    banner: 'Java e Diamantit po vjen. Përgatit listën e dëshirave.',
+    
     hero: {
-      tag: 'E RE',
-      title: 'JAVA E DIAMANTIT',
+     
+    
       cta: 'BLEJ TANI',
     },
     home: {
