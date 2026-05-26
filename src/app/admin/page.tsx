@@ -1,0 +1,782 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useLanguage } from '@/lib/LanguageContext';
+import { getProducts, saveProducts, Product, DEFAULT_PRODUCTS, MATERIAL_OPTIONS, RING_SIZES, BRACELET_SIZES, NECKLACE_SIZES, CARATS, STONE_OPTIONS, STONE_SIZE_OPTIONS, CATEGORIES, MaterialVariant } from '@/data/products';
+import {
+  sanitizeText, sanitizeUrl, sanitizeNumber, isValidProduct,
+  isRateLimited, recordAttempt, clearRateLimit, formatLockoutTime,
+  LIMITS,
+} from '@/lib/security';
+
+// Password is now verified SERVER-SIDE via /api/admin-login
+// NEXT_PUBLIC_ADMIN_PASSWORD is no longer used — kept only as fallback for dev
+const EMPTY_PRODUCT: Omit<Product, 'id'> = {
+  name: '',
+  price: 0,
+  priceMax: undefined,
+  category: 'everyday-rings',
+  description: '',
+  image: '',
+  image2: '',
+  featured: false,
+  materials: [],
+  materialVariants: [],
+  sizes: [],
+  sku: '',
+  stones: [],
+  stoneSizes: [],
+  hasCoupleOption: false,
+  hasEngraving: false,
+};
+
+export default function AdminPage() {
+  const { t, language, setLanguage } = useLanguage();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [lockoutInfo, setLockoutInfo] = useState<{ limited: boolean; remainingMs: number; attemptsLeft: number } | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [editing, setEditing] = useState<Product | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const [form, setForm] = useState<Omit<Product, 'id'>>(EMPTY_PRODUCT);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCat, setFilterCat] = useState('all');
+  const [saved, setSaved] = useState(false);
+
+  const RATE_KEY = 'admin-login';
+  const SESSION_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+  useEffect(() => {
+    const auth = sessionStorage.getItem('ds-admin');
+    const loginTime = sessionStorage.getItem('ds-admin-time');
+
+    // Check session timeout
+    if (auth === 'true' && loginTime) {
+      const elapsed = Date.now() - parseInt(loginTime, 10);
+      if (elapsed > SESSION_TIMEOUT_MS) {
+        // Session expired
+        sessionStorage.removeItem('ds-admin');
+        sessionStorage.removeItem('ds-admin-time');
+      } else {
+        setIsLoggedIn(true);
+      }
+    }
+
+    // Load and validate products from localStorage
+    const raw = getProducts();
+    const validated = raw.filter(isValidProduct);
+    setProducts(validated);
+    setLockoutInfo(isRateLimited(RATE_KEY));
+  }, []);
+
+  // Update countdown timer while locked out
+  useEffect(() => {
+    if (!lockoutInfo?.limited) return;
+    const interval = setInterval(() => {
+      const current = isRateLimited(RATE_KEY);
+      setLockoutInfo(current);
+      if (!current.limited) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutInfo?.limited]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Check client-side rate limit first (UX only — real check is on server)
+    const limit = isRateLimited(RATE_KEY);
+    if (limit.limited) {
+      setLockoutInfo(limit);
+      setLoginError(`Too many attempts. Try again in ${formatLockoutTime(limit.remainingMs)}.`);
+      setPassword('');
+      return;
+    }
+
+    setLoginError('');
+
+    try {
+      const res = await fetch('/api/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: password.slice(0, 128) }),
+        credentials: 'same-origin',
+      });
+
+      if (res.ok) {
+        // Success — server set an httpOnly cookie
+        setIsLoggedIn(true);
+        sessionStorage.setItem('ds-admin', 'true');
+        sessionStorage.setItem('ds-admin-time', Date.now().toString());
+        setLoginError('');
+        clearRateLimit(RATE_KEY);
+      } else if (res.status === 429) {
+        // Server-side rate limit hit
+        const data = await res.json().catch(() => ({}));
+        const remainingMs = data.remainingMs ?? LOCKOUT_DURATION_MS;
+        recordAttempt(RATE_KEY);
+        setLockoutInfo({ limited: true, remainingMs, attemptsLeft: 0 });
+        setLoginError(`Too many attempts. Please wait ${formatLockoutTime(remainingMs)}.`);
+      } else {
+        // Wrong password
+        const state = recordAttempt(RATE_KEY);
+        const newLimit = isRateLimited(RATE_KEY);
+        setLockoutInfo(newLimit);
+        const attemptsLeft = Math.max(0, 5 - state.attempts);
+        if (state.lockedUntil > Date.now()) {
+          setLoginError(`Too many failed attempts. Locked for ${formatLockoutTime(state.lockedUntil - Date.now())}.`);
+        } else if (attemptsLeft > 0) {
+          setLoginError(`Incorrect password. ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining.`);
+        } else {
+          setLoginError('Too many failed attempts. Please wait 15 minutes.');
+        }
+      }
+    } catch {
+      setLoginError('Connection error. Please try again.');
+    }
+
+    setPassword('');
+  };
+
+  const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin-logout', { method: 'POST', credentials: 'same-origin' });
+    } catch { /* ignore */ }
+    sessionStorage.removeItem('ds-admin');
+    sessionStorage.removeItem('ds-admin-time');
+    setIsLoggedIn(false);
+  };
+
+  const startAdd = () => {
+    setForm(EMPTY_PRODUCT);
+    setIsAdding(true);
+    setEditing(null);
+  };
+
+  const startEdit = (p: Product) => {
+    setForm({
+      name: p.name,
+      price: p.price,
+      priceMax: p.priceMax,
+      category: p.category,
+      description: p.description,
+      image: p.image,
+      image2: p.image2 || '',
+      featured: p.featured,
+      materials: p.materials || [],
+      materialVariants: p.materialVariants || [],
+      sizes: p.sizes || [],
+      sku: p.sku || '',
+      stones: p.stones || [],
+      stoneSizes: p.stoneSizes || [],
+      hasCoupleOption: p.hasCoupleOption || false,
+      hasEngraving: p.hasEngraving || false,
+    });
+    setEditing(p);
+    setIsAdding(false);
+  };
+
+  const handleSave = () => {
+    // Sanitize all inputs before saving
+    const cleanName = sanitizeText(form.name, LIMITS.PRODUCT_NAME);
+    const cleanDesc = sanitizeText(form.description, LIMITS.DESCRIPTION);
+    const cleanImage = sanitizeUrl(form.image);
+    const cleanImage2 = form.image2 ? sanitizeUrl(form.image2) : '';
+    const cleanSku = sanitizeText(form.sku || '', 50);
+    const cleanPrice = sanitizeNumber(form.price, 0, 999999);
+    const cleanPriceMax = form.priceMax ? sanitizeNumber(form.priceMax, 0, 999999) : undefined;
+
+    if (!cleanName) { alert('Product name is required and must be valid text.'); return; }
+    if (!cleanPrice) { alert('Price must be a valid number greater than 0.'); return; }
+    if (!cleanImage) { alert('Please enter a valid https:// image URL.'); return; }
+
+    // Sanitize material variant prices
+    const cleanVariants = (form.materialVariants || []).map(v => ({
+      name: sanitizeText(v.name, 50),
+      price: sanitizeNumber(v.price, 0, 999999),
+    })).filter(v => v.name);
+
+    // Sanitize stone sizes
+    const cleanStoneSizes = (form.stoneSizes || []).map(s => sanitizeText(s, 20)).filter(Boolean);
+
+    let updated: Product[];
+    if (isAdding) {
+      const newProduct: Product = {
+        id: Date.now().toString(),
+        name: cleanName,
+        price: cleanPrice,
+        priceMax: cleanPriceMax,
+        category: form.category,
+        description: cleanDesc,
+        image: cleanImage,
+        image2: cleanImage2 || undefined,
+        featured: Boolean(form.featured),
+        materials: cleanVariants.map(v => v.name.replace(' 14ct','').replace(' 18ct','')).filter((m, i, arr) => arr.indexOf(m) === i),
+        materialVariants: cleanVariants,
+        sizes: (form.sizes || []).map(s => sanitizeText(s, 10)).filter(Boolean),
+        sku: cleanSku || undefined,
+        stones: (form.stones || []).map(s => sanitizeText(s, 30)).filter(Boolean),
+        stoneSizes: cleanStoneSizes,
+        hasCoupleOption: Boolean(form.hasCoupleOption),
+        hasEngraving: Boolean(form.hasEngraving),
+      };
+      updated = [...products, newProduct];
+    } else if (editing) {
+      updated = products.map(p =>
+        p.id === editing.id
+          ? {
+              ...editing,
+              name: cleanName,
+              price: cleanPrice,
+              priceMax: cleanPriceMax,
+              category: form.category,
+              description: cleanDesc,
+              image: cleanImage,
+              image2: cleanImage2 || undefined,
+              featured: Boolean(form.featured),
+              materials: cleanVariants.map(v => v.name.replace(' 14ct','').replace(' 18ct','')).filter((m, i, arr) => arr.indexOf(m) === i),
+              materialVariants: cleanVariants,
+              sizes: (form.sizes || []).map(s => sanitizeText(s, 10)).filter(Boolean),
+              sku: cleanSku || undefined,
+              stones: (form.stones || []).map(s => sanitizeText(s, 30)).filter(Boolean),
+              stoneSizes: cleanStoneSizes,
+              hasCoupleOption: Boolean(form.hasCoupleOption),
+              hasEngraving: Boolean(form.hasEngraving),
+            }
+          : p
+      );
+    } else {
+      return;
+    }
+    setProducts(updated);
+    saveProducts(updated);
+    setIsAdding(false);
+    setEditing(null);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const handleDelete = (id: string) => {
+    if (!confirm(t.admin.confirmDelete)) return;
+    const updated = products.filter(p => p.id !== id);
+    setProducts(updated);
+    saveProducts(updated);
+    if (editing?.id === id) setEditing(null);
+  };
+
+  const handleReset = () => {
+    if (!confirm('Reset all products to defaults?')) return;
+    setProducts(DEFAULT_PRODUCTS);
+    saveProducts(DEFAULT_PRODUCTS);
+    setEditing(null);
+    setIsAdding(false);
+  };
+
+  const filtered = products.filter(p => {
+    const matchCat = filterCat === 'all' || p.category === filterCat;
+    const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchCat && matchSearch;
+  });
+
+  const categoryLabels: Record<string, string> = Object.fromEntries(
+    CATEGORIES.map(c => [c.key, language === 'sq' ? c.sq : c.en])
+  );
+
+  // LOGIN SCREEN
+  if (!isLoggedIn) {
+    const isLocked = lockoutInfo?.limited ?? false;
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f3ee' }}>
+        <div style={{ background: '#fff', padding: '48px', width: '100%', maxWidth: 420, boxShadow: '0 4px 40px rgba(26,10,10,0.1)' }}>
+          <div style={{ textAlign: 'center', marginBottom: 36 }}>
+            <Image src="https://desuisse.com/wp-content/uploads/2023/02/desuisselogo-2.png" alt="DeSuisse" width={140} height={42} style={{ objectFit: 'contain', height: 42, width: 'auto' }} unoptimized />
+            <h1 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.8rem', fontWeight: 400, marginTop: 20, color: '#1a0a0a' }}>
+              {t.admin.loginTitle}
+            </h1>
+            {/* Attempts remaining indicator */}
+            {lockoutInfo && !isLocked && lockoutInfo.attemptsLeft < 5 && lockoutInfo.attemptsLeft > 0 && (
+              <p style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#e67e22', marginTop: 8 }}>
+                {lockoutInfo.attemptsLeft} attempt{lockoutInfo.attemptsLeft !== 1 ? 's' : ''} remaining
+              </p>
+            )}
+          </div>
+
+          {isLocked ? (
+            <div style={{ textAlign: 'center', padding: '20px', background: '#fdf0ee', border: '1px solid #f5c6c6' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c0392b" strokeWidth="2" style={{ marginBottom: 12 }}>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <p style={{ fontFamily: 'Montserrat', fontSize: 13, fontWeight: 600, color: '#c0392b', marginBottom: 8 }}>
+                Account Temporarily Locked
+              </p>
+              <p style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#888' }}>
+                Too many failed attempts. Try again in{' '}
+                <strong>{formatLockoutTime(lockoutInfo?.remainingMs ?? 0)}</strong>.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <input
+                type="password"
+                placeholder={t.admin.password}
+                className="ds-input"
+                value={password}
+                onChange={e => setPassword(e.target.value.slice(0, 128))} // max 128 chars
+                required
+                autoFocus
+                autoComplete="current-password"
+                disabled={isLocked}
+              />
+              {loginError && (
+                <p style={{ color: '#c0392b', fontFamily: 'Montserrat', fontSize: 12 }}>{loginError}</p>
+              )}
+              <button type="submit" className="btn-dark" style={{ width: '100%', textAlign: 'center' }} disabled={isLocked}>
+                {t.admin.login}
+              </button>
+            </form>
+          )}
+          <div style={{ textAlign: 'center', marginTop: 24 }}>
+            <Link href="/" style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#888' }}>
+              ← Back to website
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ADMIN DASHBOARD
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'Montserrat' }}>
+
+      {/* Sidebar */}
+      <aside className="admin-sidebar" style={{ padding: '32px 0' }}>
+        <div style={{ padding: '0 24px 32px', borderBottom: '1px solid #2a1a1a' }}>
+          <Image
+            src="https://desuisse.com/wp-content/uploads/2023/02/desuisselogo-2.png"
+            alt="DeSuisse"
+            width={130}
+            height={38}
+            style={{ filter: 'brightness(0) invert(1)', objectFit: 'contain', height: 38, width: 'auto' }}
+            unoptimized
+          />
+          <p style={{ fontSize: 10, color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 8 }}>
+            Admin Panel
+          </p>
+        </div>
+
+        <nav style={{ padding: '24px 0' }}>
+          <div style={{ padding: '10px 24px', background: '#2a1a1a', color: '#c9a84c', fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            <span>◆ {t.admin.products}</span>
+          </div>
+          <Link href="/" style={{ display: 'block', padding: '10px 24px', color: '#888', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', transition: 'color 0.2s' }}>
+            ← {t.nav.home}
+          </Link>
+        </nav>
+
+        {/* Language switcher in sidebar */}
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #2a1a1a', marginTop: 'auto' }}>
+          <p style={{ fontSize: 10, color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Language</p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setLanguage('sq')} style={{ flex: 1, padding: '6px 0', border: '1px solid', borderColor: language === 'sq' ? '#c9a84c' : '#333', background: language === 'sq' ? '#c9a84c' : 'transparent', color: language === 'sq' ? '#1a0a0a' : '#888', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', cursor: 'pointer', transition: 'all 0.2s' }}>
+              ALB
+            </button>
+            <button onClick={() => setLanguage('en')} style={{ flex: 1, padding: '6px 0', border: '1px solid', borderColor: language === 'en' ? '#c9a84c' : '#333', background: language === 'en' ? '#c9a84c' : 'transparent', color: language === 'en' ? '#1a0a0a' : '#888', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', cursor: 'pointer', transition: 'all 0.2s' }}>
+              EN
+            </button>
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #2a1a1a' }}>
+          <button onClick={handleLogout} style={{ width: '100%', padding: '10px 0', background: 'transparent', border: '1px solid #333', color: '#888', fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.2s' }}>
+            {t.admin.logout}
+          </button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main style={{ flex: 1, background: '#fafaf8', overflowY: 'auto' }}>
+        {/* Top bar */}
+        <div style={{ background: '#fff', borderBottom: '1px solid #e8e0d4', padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+          <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.8rem', fontWeight: 400, color: '#1a0a0a' }}>
+            {t.admin.products}
+            <span style={{ fontSize: 14, fontFamily: 'Montserrat', color: '#999', marginLeft: 12, fontWeight: 400 }}>
+              ({products.length})
+            </span>
+          </h2>
+          <div style={{ display: 'flex', gap: 12 }}>
+            {saved && (
+              <span style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#27ae60', display: 'flex', alignItems: 'center', gap: 6 }}>
+                ✓ Saved!
+              </span>
+            )}
+            <button onClick={handleReset} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #e8e0d4', color: '#999', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>
+              Reset
+            </button>
+            <button onClick={startAdd} className="btn-dark" style={{ padding: '10px 24px', fontSize: 10 }}>
+              + {t.admin.addProduct}
+            </button>
+          </div>
+        </div>
+
+        <div style={{ padding: '32px', display: 'grid', gridTemplateColumns: editing || isAdding ? '1fr 420px' : '1fr', gap: 32, alignItems: 'start' }}>
+
+          {/* Product list */}
+          <div>
+            {/* Search + filter */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                placeholder="Search products..."
+                className="ds-input"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                style={{ flex: 1, minWidth: 200 }}
+              />
+              <select
+                className="ds-input"
+                value={filterCat}
+                onChange={e => setFilterCat(e.target.value)}
+                style={{ width: 200 }}
+              >
+                <option value="all">{language === 'sq' ? 'Të gjitha' : 'All'}</option>
+                {CATEGORIES.map(c => (
+                  <option key={c.key} value={c.key}>{language === 'sq' ? c.sq : c.en}</option>
+                ))}
+              </select>
+            </div>
+
+            {filtered.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: '#999', fontSize: 14 }}>
+                {t.admin.noProducts}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {filtered.map((product) => (
+                  <div
+                    key={product.id}
+                    style={{
+                      background: '#fff',
+                      border: editing?.id === product.id ? '1px solid #c9a84c' : '1px solid #e8e0d4',
+                      padding: '16px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 16,
+                      transition: 'border-color 0.2s',
+                    }}
+                  >
+                    {/* Thumbnail */}
+                    <div style={{ width: 56, height: 56, flexShrink: 0, background: '#f7f3ee', overflow: 'hidden' }}>
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        width={56}
+                        height={56}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        unoptimized
+                      />
+                    </div>
+
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: '#1a0a0a' }}>{product.name}</p>
+                        {product.featured && (
+                          <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', background: '#f7f3ee', color: '#c9a84c', padding: '2px 8px', border: '1px solid #e8e0d4' }}>
+                            ★ Featured
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: 12, color: '#999', marginTop: 2 }}>
+                        {categoryLabels[product.category]} · {product.price.toLocaleString('de-DE')}€{product.priceMax ? ` – ${product.priceMax.toLocaleString('de-DE')}€` : ''}
+                      </p>
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      <button
+                        onClick={() => startEdit(product)}
+                        style={{ padding: '6px 14px', background: 'transparent', border: '1px solid #1a0a0a', color: '#1a0a0a', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        style={{ padding: '6px 14px', background: 'transparent', border: '1px solid #c0392b', color: '#c0392b', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}
+                      >
+                        {t.admin.deleteProduct}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Edit / Add Form */}
+          {(editing || isAdding) && (
+            <div style={{ background: '#fff', border: '1px solid #e8e0d4', padding: '28px', position: 'sticky', top: 20, maxHeight: '90vh', overflowY: 'auto' }}>
+              <h3 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.4rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 24 }}>
+                {isAdding ? t.admin.addProduct : t.admin.editProduct}
+              </h3>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {/* Name */}
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>{t.admin.productName} *</label>
+                  <input type="text" className="ds-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Adele" />
+                </div>
+
+                {/* SKU */}
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>SKU</label>
+                  <input type="text" className="ds-input" value={form.sku || ''} onChange={e => setForm({ ...form, sku: e.target.value })} placeholder="e.g. DS-001" />
+                </div>
+
+                {/* Price */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>{t.admin.price} *</label>
+                    <input type="number" className="ds-input" value={form.price || ''} onChange={e => setForm({ ...form, price: Number(e.target.value) })} placeholder="500" min="0" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>Max Price</label>
+                    <input type="number" className="ds-input" value={form.priceMax || ''} onChange={e => setForm({ ...form, priceMax: e.target.value ? Number(e.target.value) : undefined })} placeholder="1000" min="0" />
+                  </div>
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>{t.admin.category}</label>
+                  <select className="ds-input" value={form.category} onChange={e => setForm({ ...form, category: e.target.value as Product['category'], sizes: [] })}>
+                    {CATEGORIES.map(cat => (
+                      <option key={cat.key} value={cat.key}>{language === 'sq' ? cat.sq : cat.en}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Materials & Carats — separate selectors */}
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>
+                    {language === 'sq' ? 'Materialet & Çmimet' : 'Materials & Prices'}
+                  </label>
+                  <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#bbb', marginBottom: 12, lineHeight: 1.6 }}>
+                    {language === 'sq'
+                      ? 'Zgjidhni materialin, pastaj karatazhin dhe vendosni çmimin.'
+                      : 'Select the material, then the carat, and set a price for each.'}
+                  </p>
+
+                  {/* Step 1: pick materials */}
+                  <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#888', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+                    1. {language === 'sq' ? 'Zgjidhni Materialet' : 'Select Materials'}
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+                    {MATERIAL_OPTIONS.map(mat => {
+                      const hasAny = (form.materialVariants || []).some(v => v.name.startsWith(mat));
+                      return (
+                        <button key={mat} type="button" onClick={() => {
+                          const current = form.materialVariants || [];
+                          if (hasAny) {
+                            // remove all variants of this material
+                            setForm({ ...form, materialVariants: current.filter(v => !v.name.startsWith(mat)) });
+                          } else {
+                            // add default variants for this material with both carats
+                            const newVars = CARATS.map(ct => ({ name: `${mat} ${ct}`, price: form.price || 0 }));
+                            setForm({ ...form, materialVariants: [...current, ...newVars] });
+                          }
+                        }} style={{ padding: '6px 14px', border: `1px solid ${hasAny ? '#1a0a0a' : '#e8e0d4'}`, background: hasAny ? '#1a0a0a' : '#fff', color: hasAny ? '#fff' : '#666', fontSize: 10, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
+                          {mat}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Step 2: for each selected material, pick carats and set prices */}
+                  {MATERIAL_OPTIONS.filter(mat => (form.materialVariants || []).some(v => v.name.startsWith(mat))).length > 0 && (
+                    <div>
+                      <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#888', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                        2. {language === 'sq' ? 'Zgjidhni Karatazhin & Çmimin' : 'Select Carat & Price'}
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {MATERIAL_OPTIONS.filter(mat => (form.materialVariants || []).some(v => v.name.startsWith(mat))).map(mat => (
+                          <div key={mat} style={{ background: '#f7f3ee', padding: '12px 14px', border: '1px solid #e8e0d4' }}>
+                            <p style={{ fontFamily: 'Montserrat', fontSize: 11, fontWeight: 600, color: '#1a0a0a', marginBottom: 10 }}>{mat}</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {CARATS.map(ct => {
+                                const variantName = `${mat} ${ct}`;
+                                const existing = (form.materialVariants || []).find(v => v.name === variantName);
+                                const isActive = !!existing;
+                                return (
+                                  <div key={ct} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <input type="checkbox" checked={isActive} onChange={e => {
+                                      const current = form.materialVariants || [];
+                                      if (e.target.checked) {
+                                        setForm({ ...form, materialVariants: [...current, { name: variantName, price: form.price || 0 }] });
+                                      } else {
+                                        setForm({ ...form, materialVariants: current.filter(v => v.name !== variantName) });
+                                      }
+                                    }} style={{ width: 14, height: 14, accentColor: '#c9a84c', cursor: 'pointer', flexShrink: 0 }} />
+                                    <span style={{ fontFamily: 'Montserrat', fontSize: 11, color: isActive ? '#1a0a0a' : '#aaa', minWidth: 40, fontWeight: isActive ? 600 : 400 }}>{ct}</span>
+                                    {isActive && (
+                                      <>
+                                        <input type="number" value={existing?.price || ''} min="0"
+                                          onChange={e => {
+                                            const updated = (form.materialVariants || []).map(v => v.name === variantName ? { ...v, price: Number(e.target.value) } : v);
+                                            setForm({ ...form, materialVariants: updated });
+                                          }}
+                                          style={{ width: 90, padding: '5px 8px', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 11, outline: 'none' }}
+                                          placeholder="0"
+                                        />
+                                        <span style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#999' }}>€</span>
+                                      </>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Summary */}
+                  {(form.materialVariants || []).length > 0 && (
+                    <div style={{ marginTop: 10, padding: '8px 12px', background: '#f7f3ee', fontSize: 10, fontFamily: 'Montserrat', color: '#666', lineHeight: 1.8 }}>
+                      {(form.materialVariants || []).map(v => `${v.name}: ${v.price}€`).join(' · ')}
+                    </div>
+                  )}
+                </div>
+
+                {/* Sizes */}
+                {form.category !== 'earrings' && (
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 8 }}>
+                      {language === 'sq' ? 'Madhësitë' : 'Sizes'}
+                    </label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {(form.category === 'everyday-rings' || form.category === 'engagement-rings' || form.category === 'wedding-rings' ? RING_SIZES : form.category === 'bracelets' ? BRACELET_SIZES : NECKLACE_SIZES).map(s => {
+                        const active = (form.sizes || []).includes(s);
+                        return (
+                          <button key={s} type="button" onClick={() => {
+                            const szs = form.sizes || [];
+                            setForm({ ...form, sizes: active ? szs.filter(x => x !== s) : [...szs, s] });
+                          }} style={{ width: 44, height: 32, border: `1px solid ${active ? '#1a0a0a' : '#e8e0d4'}`, background: active ? '#1a0a0a' : '#fff', color: active ? '#fff' : '#666', fontSize: 10, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
+                            {s}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Stones */}
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 8 }}>
+                    {language === 'sq' ? 'Gurët (opsional)' : 'Stones (optional)'}
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {STONE_OPTIONS.map(s => {
+                      const active = (form.stones || []).includes(s);
+                      return (
+                        <button key={s} type="button" onClick={() => {
+                          const st = form.stones || [];
+                          setForm({ ...form, stones: active ? st.filter(x => x !== s) : [...st, s] });
+                        }} style={{ padding: '5px 12px', border: `1px solid ${active ? '#1a0a0a' : '#e8e0d4'}`, background: active ? '#1a0a0a' : '#fff', color: active ? '#fff' : '#666', fontSize: 10, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
+                          {s}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Stone sizes — free text input, comma separated */}
+                {(form.stones || []).length > 0 && (
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>
+                      {language === 'sq' ? 'Madhësitë e Gurit' : 'Stone Sizes'}
+                    </label>
+                    <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#bbb', marginBottom: 8 }}>
+                      {language === 'sq' ? 'Shkruani madhësitë e ndara me presje, p.sh. 0.30ct, 0.50ct, 1.00ct' : 'Enter sizes separated by commas, e.g. 0.30ct, 0.50ct, 1.00ct'}
+                    </p>
+                    <input
+                      type="text"
+                      className="ds-input"
+                      value={(form.stoneSizes || []).join(', ')}
+                      onChange={e => {
+                        const vals = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                        setForm({ ...form, stoneSizes: vals });
+                      }}
+                      placeholder="0.30ct, 0.50ct, 0.75ct, 1.00ct"
+                    />
+                    {(form.stoneSizes || []).length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                        {(form.stoneSizes || []).map(s => (
+                          <span key={s} style={{ padding: '3px 10px', background: '#1a0a0a', color: '#fff', fontFamily: 'Montserrat', fontSize: 10, fontWeight: 600 }}>{s}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Couple option + Engraving toggles */}
+                <div style={{ background: '#f7f3ee', padding: '14px 16px', border: '1px solid #e8e0d4', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={form.hasCoupleOption || false} onChange={e => setForm({ ...form, hasCoupleOption: e.target.checked })} style={{ width: 14, height: 14, accentColor: '#c9a84c', cursor: 'pointer' }} />
+                    <span style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#444', fontWeight: 500 }}>
+                      {language === 'sq' ? 'Opsion çift (Unaza e Burrit & Gruas)' : 'Couple option (Men\'s & Women\'s ring)'}
+                    </span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={form.hasEngraving || false} onChange={e => setForm({ ...form, hasEngraving: e.target.checked })} style={{ width: 14, height: 14, accentColor: '#c9a84c', cursor: 'pointer' }} />
+                    <span style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#444', fontWeight: 500 }}>
+                      {language === 'sq' ? 'Mundëso gravim falas' : 'Enable free engraving'}
+                    </span>
+                  </label>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>{t.admin.description}</label>
+                  <textarea className="ds-textarea" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Short product description..." style={{ minHeight: 72 }} />
+                </div>
+
+                {/* Images */}
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>{t.admin.image} * (Main)</label>
+                  <input type="url" className="ds-input" value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} placeholder="https://..." />
+                  {form.image && (
+                    <div style={{ marginTop: 8, width: 72, height: 72, overflow: 'hidden', background: '#f7f3ee' }}>
+                      <Image src={form.image} alt="Preview" width={72} height={72} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>{t.admin.image} (Hover)</label>
+                  <input type="url" className="ds-input" value={form.image2 || ''} onChange={e => setForm({ ...form, image2: e.target.value })} placeholder="https://..." />
+                </div>
+
+                {/* Featured */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input type="checkbox" id="featured" checked={form.featured} onChange={e => setForm({ ...form, featured: e.target.checked })} style={{ width: 16, height: 16, accentColor: '#c9a84c', cursor: 'pointer' }} />
+                  <label htmlFor="featured" style={{ fontSize: 12, color: '#444', cursor: 'pointer', fontWeight: 500 }}>{t.admin.featured} — show on homepage</label>
+                </div>
+
+                {/* Save/Cancel */}
+                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                  <button onClick={handleSave} className="btn-dark" style={{ flex: 1, textAlign: 'center' }}>{t.admin.save}</button>
+                  <button onClick={() => { setEditing(null); setIsAdding(false); }} style={{ flex: 1, padding: '12px', background: 'transparent', border: '1px solid #e8e0d4', color: '#888', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>{t.admin.cancel}</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

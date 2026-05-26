@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+# Block admin from all crawlers
+User-agent: *
+Disallow: /admin/

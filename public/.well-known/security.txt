@@ -1,0 +1,3 @@
+Contact: mailto:info@desuisse.com
+Preferred-Languages: en, sq
+Policy: https://desuisse.com/security-policy

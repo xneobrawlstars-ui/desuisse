@@ -1,0 +1,152 @@
+'use client';
+
+import Link from 'next/link';
+import Image from 'next/image';
+import { useState, useEffect, useRef } from 'react';
+import { useLanguage } from '@/lib/LanguageContext';
+import { useWishlist } from '@/lib/WishlistContext';
+import { useCart } from '@/lib/CartContext';
+import SearchOverlay from './SearchOverlay';
+import SidebarMenu from './SidebarMenu';
+
+export default function Header() {
+  const { t, language, setLanguage, mounted } = useLanguage();
+  const { count: wishlistCount } = useWishlist();
+  const { count: cartCount, setDrawerOpen } = useCart();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const lastScrollRef = useRef(0);
+  const ticking = useRef(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (ticking.current) return;
+      ticking.current = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const prev = lastScrollRef.current;
+        setScrolled(y > 60);
+        if (y > 120 && y - prev > 8) setHidden(true);
+        else if (prev - y > 8) setHidden(false);
+        lastScrollRef.current = y;
+        ticking.current = false;
+      });
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  if (!mounted) {
+    return <header className="site-header" style={{ height: 73 }} />;
+  }
+
+  return (
+    <>
+      {/* NO announcement bar — removed */}
+
+      <header className="site-header" style={{
+        transform: hidden ? 'translateY(-110%)' : 'translateY(0)',
+        transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s',
+        boxShadow: scrolled ? '0 4px 24px rgba(26,10,10,0.1)' : '0 1px 8px rgba(26,10,10,0.06)',
+      }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', height: 72, gap: 20 }}>
+
+            {/* FAR LEFT: hamburger */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="header-icon-btn"
+              aria-label="Menu"
+              style={{ flexShrink: 0 }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+
+            {/* LOGO — far left, right after hamburger */}
+            <Link href="/" style={{ display: 'flex', alignItems: 'center', flexShrink: 0, textDecoration: 'none' }}>
+              <Image
+                src="https://desuisse.com/wp-content/uploads/2023/02/desuisselogo-2.png"
+                alt="DeSuisse"
+                width={160} height={48}
+                style={{ objectFit: 'contain', height: 48, width: 'auto' }}
+                priority unoptimized
+              />
+            </Link>
+
+            {/* SPACER — pushes right icons to the right */}
+            <div style={{ flex: 1 }} />
+
+            {/* RIGHT: language switcher + icons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              {/* Language switcher */}
+              <div className="lang-switcher">
+                <button className={`lang-btn ${language === 'sq' ? 'active' : ''}`} onClick={() => setLanguage('sq')} title="Shqip">ALB</button>
+                <span className="lang-divider">|</span>
+                <button className={`lang-btn ${language === 'en' ? 'active' : ''}`} onClick={() => setLanguage('en')} title="English">EN</button>
+              </div>
+
+              {/* Search */}
+              <button onClick={() => setSearchOpen(true)} className="header-icon-btn" aria-label={t.nav.search}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+              </button>
+
+              {/* Favorites */}
+              <Link href="/favorites" className="header-icon-btn" style={{ position: 'relative', textDecoration: 'none', color: 'inherit' }} aria-label={t.nav.wishlist}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                {wishlistCount > 0 && (
+                  <span style={{ position: 'absolute', top: -6, right: -7, background: '#c9a84c', color: '#1a0a0a', borderRadius: '50%', width: 15, height: 15, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat' }}>
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Cart */}
+              <button onClick={() => setDrawerOpen(true)} className="header-icon-btn" style={{ position: 'relative', color: 'inherit' }} aria-label={t.nav.cart}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                  <line x1="3" y1="6" x2="21" y2="6"/>
+                  <path d="M16 10a4 4 0 0 1-8 0"/>
+                </svg>
+                {cartCount > 0 && (
+                  <span style={{ position: 'absolute', top: -6, right: -7, background: '#1a0a0a', color: '#fff', borderRadius: '50%', width: 15, height: 15, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat' }}>
+                    {cartCount}
+                  </span>
+                )}
+                <span className="desktop-only" style={{ fontFamily: 'Montserrat', fontSize: 11, fontWeight: 500, marginLeft: 2 }}>
+                  {cartCount > 0 ? cartCount : '0'} — 0.00€
+                </span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </header>
+
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <SidebarMenu open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      <style>{`
+        .header-icon-btn {
+          background: none; border: none; cursor: pointer; padding: 8px;
+          display: flex; align-items: center; justify-content: center;
+          color: #1a0a0a; border-radius: 50%;
+          transition: background 0.2s, color 0.2s, transform 0.15s;
+          position: relative;
+        }
+        .header-icon-btn:hover { background: #f7f3ee; color: #c9a84c; transform: scale(1.12); }
+        .header-icon-btn:active { transform: scale(0.95); }
+        @media (max-width: 768px) { .desktop-only { display: none !important; } }
+      `}</style>
+    </>
+  );
+}
