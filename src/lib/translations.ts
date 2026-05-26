@@ -12,10 +12,10 @@ export const translations = {
       cart: 'Cart',
       search: 'Search',
     },
-    
+    banner: 'Free engraving on all rings. Discover our collections.',
     hero: {
-      tag: 'NEW IN',
-      title: '',
+      tag: 'LUXURY JEWELLERY',
+      title: 'DeSuisse',
       cta: 'SHOP NOW',
     },
     home: {
@@ -152,10 +152,10 @@ At the age of 16, Bajram Sahatciu, as the first in the family, received an educa
       cart: 'Shporta',
       search: 'Kërko',
     },
-    
+    banner: 'Gravim falas në të gjitha unazat. Zbuloni koleksionet tona.',
     hero: {
-     
-    
+      tag: 'BIZHUTERI LUKSOZE',
+      title: 'DeSuisse',
       cta: 'BLEJ TANI',
     },
     home: {
