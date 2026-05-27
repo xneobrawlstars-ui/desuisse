@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { fetchProducts, saveProductsToDb, saveProducts, Product, DEFAULT_PRODUCTS, MATERIAL_OPTIONS, RING_SIZES, BRACELET_SIZES, NECKLACE_SIZES, CARATS, STONE_OPTIONS, STONE_SIZE_OPTIONS, CATEGORIES, MaterialVariant } from '@/data/products';
+import { DEFAULT_SITE_IMAGES, SiteImages } from '@/lib/siteImages';
 import {
   sanitizeText, sanitizeUrl, sanitizeNumber, isValidProduct,
   isRateLimited, recordAttempt, clearRateLimit, formatLockoutTime,
@@ -45,6 +46,9 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCat, setFilterCat] = useState('all');
   const [saved, setSaved] = useState(false);
+  const [activeTab, setActiveTab] = useState<'products' | 'images'>('products');
+  const [siteImages, setSiteImages] = useState<SiteImages>(DEFAULT_SITE_IMAGES);
+  const [imagesSaved, setImagesSaved] = useState(false);
 
   const RATE_KEY = 'admin-login';
   const SESSION_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
@@ -70,6 +74,10 @@ export default function AdminPage() {
       const validated = products.filter(isValidProduct);
       setProducts(validated.length > 0 ? validated : []);
     });
+    // Load site images
+    fetch('/api/site-images').then(r => r.json()).then(data => {
+      if (data && typeof data === 'object') setSiteImages({ ...DEFAULT_SITE_IMAGES, ...data });
+    }).catch(() => {});
     setLockoutInfo(isRateLimited(RATE_KEY));
   }, []);
 
@@ -409,29 +417,119 @@ export default function AdminPage() {
 
       {/* Main content */}
       <main style={{ flex: 1, background: '#fafaf8', overflowY: 'auto' }}>
-        {/* Top bar */}
-        <div style={{ background: '#fff', borderBottom: '1px solid #e8e0d4', padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-          <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.8rem', fontWeight: 400, color: '#1a0a0a' }}>
-            {t.admin.products}
-            <span style={{ fontSize: 14, fontFamily: 'Montserrat', color: '#999', marginLeft: 12, fontWeight: 400 }}>
-              ({products.length})
-            </span>
-          </h2>
-          <div style={{ display: 'flex', gap: 12 }}>
-            {saved && (
-              <span style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#27ae60', display: 'flex', alignItems: 'center', gap: 6 }}>
-                ✓ Saved!
-              </span>
-            )}
-            <button onClick={handleReset} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #e8e0d4', color: '#999', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>
-              Reset
-            </button>
-            <button onClick={startAdd} className="btn-dark" style={{ padding: '10px 24px', fontSize: 10 }}>
-              + {t.admin.addProduct}
-            </button>
+        {/* Tab bar */}
+        <div style={{ background: '#fff', borderBottom: '1px solid #e8e0d4', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 0 }}>
+          <div style={{ display: 'flex' }}>
+            {(['products', 'images'] as const).map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab)} style={{
+                padding: '18px 24px', background: 'none', border: 'none',
+                borderBottom: `2px solid ${activeTab === tab ? '#c9a84c' : 'transparent'}`,
+                fontFamily: 'Montserrat', fontSize: 12, fontWeight: activeTab === tab ? 700 : 500,
+                color: activeTab === tab ? '#1a0a0a' : '#888', cursor: 'pointer',
+                letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.2s',
+              }}>
+                {tab === 'products' ? `${t.admin.products} (${products.length})` : (language === 'sq' ? 'Fotot e Faqes' : 'Site Images')}
+              </button>
+            ))}
           </div>
+          {activeTab === 'products' && (
+            <div style={{ display: 'flex', gap: 12, padding: '8px 0' }}>
+              {saved && <span style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#27ae60', display: 'flex', alignItems: 'center', gap: 6 }}>✓ Saved!</span>}
+              <button onClick={handleReset} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #e8e0d4', color: '#999', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>Reset</button>
+              <button onClick={startAdd} className="btn-dark" style={{ padding: '10px 24px', fontSize: 10 }}>+ {t.admin.addProduct}</button>
+            </div>
+          )}
+          {activeTab === 'images' && (
+            <div style={{ padding: '8px 0' }}>
+              {imagesSaved && <span style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#27ae60', marginRight: 12 }}>✓ Saved!</span>}
+            </div>
+          )}
         </div>
 
+        {/* ── SITE IMAGES TAB ── */}
+        {activeTab === 'images' && (
+          <div style={{ padding: '32px', maxWidth: 900 }}>
+            <p style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#888', marginBottom: 28, lineHeight: 1.7 }}>
+              {language === 'sq'
+                ? 'Ndryshoni URL-të e fotove për seksionet kryesore të faqes. Mund të përdorni URL-e HTTPS ose rrugë lokale si /images/foto.jpg (nëse e keni shtuar foton në public/images/).'
+                : 'Update image URLs for each homepage section. Use HTTPS URLs or local paths like /images/photo.jpg (if you\'ve added the photo to public/images/).'}
+            </p>
+
+            {/* Helper note about image formats */}
+            <div style={{ background: '#f7f3ee', border: '1px solid #e8e0d4', padding: '14px 18px', marginBottom: 28, borderLeft: '3px solid #c9a84c' }}>
+              <p style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#666', lineHeight: 1.8 }}>
+                <strong>💡 Tip:</strong> For best results on all devices (iOS, Android, desktop), upload your photos to <strong>public/images/</strong> in your project and use paths like <strong>/images/myPhoto.jpg</strong>. Avoid hotlinking from other websites — they may block the request on mobile.
+              </p>
+            </div>
+
+            {[
+              { key: 'hero',              label: 'Hero Image (Homepage full-screen background)',  note: 'Recommended: wide landscape photo, min 1920×1080' },
+              { key: 'catEveryday',       label: 'Category: Everyday Rings',                     note: 'Recommended: portrait, min 430×538' },
+              { key: 'catEngagement',     label: 'Category: Engagement Rings',                   note: 'Recommended: portrait, min 430×538' },
+              { key: 'catWedding',        label: 'Category: Wedding Rings',                      note: 'Recommended: portrait, min 430×538' },
+              { key: 'catEarrings',       label: 'Category: Earrings',                           note: 'Recommended: portrait, min 430×538' },
+              { key: 'catBracelets',      label: 'Category: Bracelets',                          note: 'Recommended: portrait, min 430×538' },
+              { key: 'catNecklaces',      label: 'Category: Necklaces',                          note: 'Recommended: portrait, min 430×538' },
+              { key: 'collectionClassic', label: 'Featured Collection: Left (e.g. The Classics)', note: 'Recommended: landscape, min 800×500' },
+              { key: 'collectionParker',  label: 'Featured Collection: Right (e.g. Parker)',     note: 'Recommended: landscape, min 800×500' },
+            ].map(field => (
+              <div key={field.key} style={{ marginBottom: 24 }}>
+                <label style={{ fontFamily: 'Montserrat', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1a0a0a', display: 'block', marginBottom: 4 }}>
+                  {field.label}
+                </label>
+                <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#bbb', marginBottom: 8 }}>{field.note}</p>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <input
+                    type="text"
+                    className="ds-input"
+                    style={{ flex: 1 }}
+                    value={siteImages[field.key as keyof SiteImages] || ''}
+                    onChange={e => setSiteImages(prev => ({ ...prev, [field.key]: e.target.value }))}
+                    placeholder="/images/photo.jpg or https://..."
+                  />
+                  {/* Preview thumbnail */}
+                  {siteImages[field.key as keyof SiteImages] && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={siteImages[field.key as keyof SiteImages]}
+                      alt="preview"
+                      style={{ width: 64, height: 64, objectFit: 'cover', flexShrink: 0, border: '1px solid #e8e0d4', background: '#f7f3ee' }}
+                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
+                </div>
+              </div>
+            ))}
+
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/site-images', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(siteImages),
+                  });
+                  if (res.ok) {
+                    setImagesSaved(true);
+                    setTimeout(() => setImagesSaved(false), 2500);
+                  } else {
+                    alert('Failed to save. Make sure you are logged in.');
+                  }
+                } catch {
+                  alert('Network error. Please try again.');
+                }
+              }}
+              className="btn-dark"
+              style={{ padding: '14px 40px', fontSize: 11 }}
+            >
+              {language === 'sq' ? 'RUAJ FOTOT' : 'SAVE IMAGES'}
+            </button>
+          </div>
+        )}
+
+        {/* ── PRODUCTS TAB ── */}
+        {activeTab === 'products' && (
         <div style={{ padding: '32px', display: 'grid', gridTemplateColumns: editing || isAdding ? '1fr 420px' : '1fr', gap: 32, alignItems: 'start' }}>
 
           {/* Product list */}
@@ -784,6 +882,7 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+        )}
       </main>
     </div>
   );

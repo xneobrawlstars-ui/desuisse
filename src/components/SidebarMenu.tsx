@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import Logo from './Logo';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface Props { open: boolean; onClose: () => void; }
@@ -44,7 +44,7 @@ export default function SidebarMenu({ open, onClose }: Props) {
       padding: '16px 0', background: 'none', border: 'none', cursor: 'pointer',
       fontFamily: 'Montserrat', fontSize: 13, fontWeight: expanded === section ? 700 : 500,
       color: expanded === section ? '#1a0a0a' : '#333', letterSpacing: '0.06em',
-      textTransform: 'uppercase',
+      textTransform: 'none',
       borderBottom: expanded === section ? 'none' : '1px solid #f0ebe3',
       transition: 'color 0.2s',
     }}>
@@ -94,7 +94,7 @@ export default function SidebarMenu({ open, onClose }: Props) {
         {/* Header */}
         <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e8e0d4', flexShrink: 0 }}>
           <Link href="/" onClick={onClose}>
-            <Image src="https://desuisse.com/wp-content/uploads/2023/02/desuisselogo-2.png" alt="DeSuisse" width={120} height={36} style={{ objectFit: 'contain', height: 36, width: 'auto' }} unoptimized />
+            <Logo dark={true} size="md" />
           </Link>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', padding: 6 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6 6 18M6 6l12 12"/></svg>

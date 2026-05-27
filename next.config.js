@@ -1,15 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Allow any https hostname so admin-entered image URLs work on all devices
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'desuisse.com',
-        pathname: '/**',
-      },
+      { protocol: 'https', hostname: '**' },
     ],
-    // Allow unoptimized images from external sources
-    unoptimized: false,
+    // Disable Next.js image optimization for external URLs
+    // so images load directly without going through the proxy
+    unoptimized: true,
   },
 
   turbopack: {
