@@ -523,10 +523,12 @@ export default function ProductPage() {
           </button>
 
           {/* Description */}
-          {product.description && (
+          {(product.description || product.descriptionSq) && (
             <div style={{ borderTop: '1px solid #f0ebe3', paddingTop: 20, marginBottom: 8 }}>
               <p style={labelStyle}>{t.description}</p>
-              <p style={{ fontFamily: 'Montserrat', fontSize: 13, color: '#555', lineHeight: 1.9 }}>{product.description}</p>
+              <p style={{ fontFamily: 'Montserrat', fontSize: 13, color: '#555', lineHeight: 1.9 }}>
+                {language === 'sq' && product.descriptionSq ? product.descriptionSq : product.description}
+              </p>
             </div>
           )}
 

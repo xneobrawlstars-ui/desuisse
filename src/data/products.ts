@@ -17,7 +17,8 @@ export interface Product {
   price: number;
   priceMax?: number;
   category: Category;
-  description: string;
+  description: string;       // English description
+  descriptionSq?: string;    // Albanian description
   image: string;
   image2?: string;
   featured: boolean;

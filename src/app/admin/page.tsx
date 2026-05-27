@@ -20,6 +20,7 @@ const EMPTY_PRODUCT: Omit<Product, 'id'> = {
   priceMax: undefined,
   category: 'everyday-rings',
   description: '',
+  descriptionSq: '',
   image: '',
   image2: '',
   featured: false,
@@ -173,6 +174,7 @@ export default function AdminPage() {
       priceMax: p.priceMax,
       category: p.category,
       description: p.description,
+      descriptionSq: p.descriptionSq || '',
       image: p.image,
       image2: p.image2 || '',
       featured: p.featured,
@@ -213,6 +215,7 @@ export default function AdminPage() {
     const cleanStoneSizes = (form.stoneSizes || []).map(s => sanitizeText(s, 20)).filter(Boolean);
 
     let updated: Product[];
+    const cleanDescSq = sanitizeText(form.descriptionSq || '', LIMITS.DESCRIPTION);
     if (isAdding) {
       const newProduct: Product = {
         id: Date.now().toString(),
@@ -221,6 +224,7 @@ export default function AdminPage() {
         priceMax: cleanPriceMax,
         category: form.category,
         description: cleanDesc,
+        descriptionSq: cleanDescSq || undefined,
         image: cleanImage,
         image2: cleanImage2 || undefined,
         featured: Boolean(form.featured),
@@ -244,6 +248,7 @@ export default function AdminPage() {
               priceMax: cleanPriceMax,
               category: form.category,
               description: cleanDesc,
+              descriptionSq: cleanDescSq || undefined,
               image: cleanImage,
               image2: cleanImage2 || undefined,
               featured: Boolean(form.featured),
@@ -846,10 +851,26 @@ export default function AdminPage() {
                   </label>
                 </div>
 
-                {/* Description */}
+                {/* Description — bilingual */}
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>{t.admin.description}</label>
-                  <textarea className="ds-textarea" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Short product description..." style={{ minHeight: 72 }} />
+                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>
+                    {t.admin.description} — English
+                  </label>
+                  <textarea className="ds-textarea" value={form.description}
+                    onChange={e => setForm({ ...form, description: e.target.value })}
+                    placeholder="Short product description in English..."
+                    style={{ minHeight: 72 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>
+                    {t.admin.description} — Shqip (Albanian)
+                  </label>
+                  <textarea className="ds-textarea" value={form.descriptionSq || ''}
+                    onChange={e => setForm({ ...form, descriptionSq: e.target.value })}
+                    placeholder="Përshkrim i shkurtër i produktit në shqip..."
+                    style={{ minHeight: 72 }}
+                  />
                 </div>
 
                 {/* Images */}

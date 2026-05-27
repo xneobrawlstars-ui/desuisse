@@ -87,7 +87,7 @@ export default function ProductCard({ product }: { product: Product }) {
           </h3>
           {product.description && (
             <p style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#999', marginBottom: 8, lineHeight: 1.6 }}>
-              {product.description}
+              {language === 'sq' && product.descriptionSq ? product.descriptionSq : product.description}
             </p>
           )}
           <p style={{ fontFamily: 'Montserrat', fontSize: 13, color: '#666' }}>{formatPrice(product)}</p>
