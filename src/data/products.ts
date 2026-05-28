@@ -56,17 +56,20 @@ export const DEFAULT_PRODUCTS: Product[] = [
   // Add your first product at /admin after deploying
 ];
 
-// ── Client-side: fetch from API (falls back to localStorage then defaults) ──
+// ── Client-side: fetch from API only — localStorage is device-specific ──
 export async function fetchProducts(): Promise<Product[]> {
   try {
-    const res = await fetch('/api/products', { cache: 'no-store' });
-    if (!res.ok) throw new Error('API error');
+    const res = await fetch('/api/products', {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' },
+    });
+    if (!res.ok) throw new Error(`API error ${res.status}`);
     const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) return data;
-    return DEFAULT_PRODUCTS;
-  } catch {
-    // Fallback to localStorage if API fails
-    return getProductsFromStorage();
+    if (Array.isArray(data)) return data;
+    return [];
+  } catch (err) {
+    console.error('[fetchProducts] error:', err);
+    return []; // Return empty — never fall back to localStorage (device-specific)
   }
 }
 
@@ -76,16 +79,19 @@ export async function saveProductsToDb(products: Product[]): Promise<boolean> {
     const res = await fetch('/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
+      credentials: 'include', // CRITICAL: sends the admin session cookie
       body: JSON.stringify(products),
     });
     if (res.ok) {
-      // Also save to localStorage as backup
+      // Also cache in localStorage as backup for this device
       saveProducts(products);
       return true;
     }
+    const err = await res.json().catch(() => ({}));
+    console.error('[saveProductsToDb] failed:', res.status, err);
     return false;
-  } catch {
+  } catch (err) {
+    console.error('[saveProductsToDb] network error:', err);
     return false;
   }
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 
@@ -113,8 +112,11 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div style={{ borderTop: '1px solid #2a1a1a', padding: '24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-          <Image src="https://desuisse.com/wp-content/uploads/2023/02/desuisselogo-2.png" alt="DeSuisse"
-            width={120} height={36} style={{ objectFit: 'contain', height: 36, width: 'auto', filter: 'brightness(0) invert(1) opacity(0.5)' }} unoptimized />
+          <img
+            src="/images/desuisse-logo-white.svg"
+            alt="DeSuisse Luxury Jewellery"
+            style={{ height: 36, width: 'auto', display: 'block', opacity: 0.7 }}
+          />
           <p style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#555', letterSpacing: '0.08em' }}>
             © {t.footer.copyright}
           </p>

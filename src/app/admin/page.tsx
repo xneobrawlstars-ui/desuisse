@@ -269,12 +269,16 @@ export default function AdminPage() {
     setProducts(updated);
     // Save to database (Vercel KV) — falls back to localStorage
     saveProductsToDb(updated).then(ok => {
-      if (!ok) saveProducts(updated); // localStorage fallback
+      if (ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+      } else {
+        alert('⚠️ Failed to save to database. Check that UPSTASH environment variables are set in Vercel and redeploy.');
+        saveProducts(updated); // at least save locally
+      }
     });
     setIsAdding(false);
     setEditing(null);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
   };
 
   const handleDelete = (id: string) => {

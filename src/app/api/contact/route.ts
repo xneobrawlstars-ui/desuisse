@@ -17,28 +17,46 @@ function isValidEmail(e: string): boolean {
   return /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(e);
 }
 
-async function sendEmail(subject: string, html: string) {
+async function sendEmail(subject: string, html: string, replyTo: string): Promise<{ ok: boolean; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   const toEmail = process.env.CONTACT_EMAIL ?? 'info@desuisse.com';
 
   if (!apiKey) {
-    console.log('[email] RESEND_API_KEY not set — email not sent');
-    return;
+    console.error('[email] RESEND_API_KEY environment variable is not set');
+    return { ok: false, error: 'RESEND_API_KEY not configured' };
   }
 
-  await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'DeSuisse Website <noreply@resend.dev>',
-      to: [toEmail],
-      subject,
-      html,
-    }),
-  });
+  console.log(`[email] Sending to: ${toEmail}, reply-to: ${replyTo}`);
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'DeSuisse Website <noreply@desuisse.com>',
+        to: [toEmail],
+        reply_to: replyTo,
+        subject,
+        html,
+      }),
+    });
+
+    const data = await res.json() as Record<string, unknown>;
+
+    if (!res.ok) {
+      console.error('[email] Resend API error:', res.status, JSON.stringify(data));
+      return { ok: false, error: `Resend error ${res.status}: ${JSON.stringify(data)}` };
+    }
+
+    console.log('[email] Sent successfully. ID:', data.id);
+    return { ok: true };
+  } catch (err) {
+    console.error('[email] Network error:', err);
+    return { ok: false, error: String(err) };
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -71,7 +89,6 @@ export async function POST(req: NextRequest) {
   const phone   = typeof b.phone === 'string' ? b.phone.slice(0, 20).replace(/[^0-9+\-\s()]/g, '') : '';
   const company = sanitize(b.company, 100);
   const message = sanitize(b.message, 2000);
-  // Detect if this is a meeting request or contact form
   const type    = sanitize(b.type, 20) || 'contact';
 
   if (!name)                return NextResponse.json({ error: 'Name required' }, { status: 400 });
@@ -94,7 +111,7 @@ export async function POST(req: NextRequest) {
         <h1 style="color:#c9a84c;margin:0;font-size:20px;font-weight:400;letter-spacing:2px">
           ${isMeeting ? 'MEETING REQUEST' : 'CONTACT MESSAGE'}
         </h1>
-        <p style="color:#888;margin:6px 0 0;font-size:12px">DeSuisse Website</p>
+        <p style="color:#888;margin:6px 0 0;font-size:12px">DeSuisse Website — desuisse.com</p>
       </div>
       <table style="width:100%;border-collapse:collapse">
         <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#888;font-size:12px;width:100px">NAME</td>
@@ -116,7 +133,12 @@ export async function POST(req: NextRequest) {
     </div>
   `;
 
-  await sendEmail(subject, html);
+  const emailResult = await sendEmail(subject, html, email);
+
+  if (!emailResult.ok) {
+    // Still return success to the user — don't expose internal errors
+    console.error('[contact] Email failed but returning success to user:', emailResult.error);
+  }
 
   return NextResponse.json({ success: true }, { status: 200 });
 }

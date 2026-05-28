@@ -70,12 +70,10 @@ export default function Header() {
 
             {/* LOGO — far left, right after hamburger */}
             <Link href="/" style={{ display: 'flex', alignItems: 'center', flexShrink: 0, textDecoration: 'none' }}>
-              <Image
-                src="https://desuisse.com/wp-content/uploads/2023/02/desuisselogo-2.png"
-                alt="DeSuisse"
-                width={160} height={48}
-                style={{ objectFit: 'contain', height: 48, width: 'auto' }}
-                priority unoptimized
+              <img
+                src="/images/desuisse-logo.svg"
+                alt="DeSuisse Luxury Jewellery"
+                style={{ height: 44, width: 'auto', display: 'block' }}
               />
             </Link>
 
