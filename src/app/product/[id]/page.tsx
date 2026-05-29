@@ -407,14 +407,14 @@ export default function ProductPage() {
 
         {/* LEFT: image */}
         <div>
-          <div style={{ background: '#f7f3ee', position: 'relative', aspectRatio: '1', marginBottom: 14 }}>
-            <Image src={images[activeImg]} alt={product.name} fill style={{ objectFit: 'contain', padding: 32 }} unoptimized />
+          <div style={{ background: '#faf8f5', position: 'relative', aspectRatio: '1', marginBottom: 14, overflow: 'hidden' }}>
+            <Image src={images[activeImg]} alt={product.name} fill style={{ objectFit: 'cover' }} unoptimized />
           </div>
           {images.length > 1 && (
             <div style={{ display: 'flex', gap: 12 }}>
               {images.map((img, i) => (
-                <button key={i} onClick={() => setActiveImg(i)} style={{ width: 80, height: 80, background: '#f7f3ee', border: `2px solid ${activeImg === i ? '#c9a84c' : 'transparent'}`, cursor: 'pointer', padding: 0, overflow: 'hidden', flexShrink: 0, transition: 'border-color 0.2s', position: 'relative' }}>
-                  <Image src={img} alt={`${product.name} ${i + 1}`} fill style={{ objectFit: 'contain', padding: 6 }} unoptimized />
+                <button key={i} onClick={() => setActiveImg(i)} style={{ width: 80, height: 80, background: '#faf8f5', border: `2px solid ${activeImg === i ? '#c9a84c' : 'transparent'}`, cursor: 'pointer', padding: 0, overflow: 'hidden', flexShrink: 0, transition: 'border-color 0.2s', position: 'relative' }}>
+                  <Image src={img} alt={`${product.name} ${i + 1}`} fill style={{ objectFit: 'cover' }} unoptimized />
                 </button>
               ))}
             </div>
