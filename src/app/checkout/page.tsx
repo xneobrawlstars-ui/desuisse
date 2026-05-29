@@ -286,7 +286,7 @@ export default function CheckoutPage() {
               {payment.method === 'transfer' && (
                 <div style={{ background: '#f7f3ee', padding: '20px', border: '1px solid #e8e0d4', marginBottom: 32 }}>
                   <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#666', lineHeight: 1.9 }}>
-                    {language === 'sq' ? 'Llogaria bankare' : 'Bank Account'}: <strong>DeSuisse SH.P.K.</strong><br />
+                    {language === 'sq' ? 'Llogaria bankare' : 'Bank Account'}: <strong>deSuisse SH.P.K.</strong><br />
                     IBAN: <strong>XK05 1212 0123 4567 8901 2</strong><br />
                     BIC: <strong>RBKOXKPR</strong><br />
                     {language === 'sq' ? 'Referenca: numri i porosisë suaj' : 'Reference: your order number'}

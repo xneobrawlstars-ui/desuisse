@@ -14,12 +14,12 @@ export default function SizingServicePage() {
         <div style={{ width: 40, height: 1, background: '#c9a84c', margin: '16px auto 0' }} />
       </div>
       <section style={{ maxWidth: 800, margin: '0 auto', padding: '80px 40px' }}>
-        <p style={{ fontFamily: 'Montserrat', fontSize: 14, color: '#555', lineHeight: 2, marginBottom: 24 }}>
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#555', lineHeight: 2, marginBottom: 24 }}>
           {language === 'sq'
-            ? 'Rregullimi i madhësisë është falas për të gjitha unazat DeSuisse. Sillni unazën tuaj në çdo nga dyqanet tona dhe ne do ta përshtasim për ju pa kosto shtesë.'
-            : 'Size adjustment is free for all DeSuisse rings. Bring your ring to any of our boutiques and we will resize it for you at no additional cost.'}
+            ? 'Rregullimi i madhësisë është falas për të gjitha unazat deSuisse. Sillni unazën tuaj në çdo nga dyqanet tona dhe ne do ta përshtasim për ju pa kosto shtesë.'
+            : 'Size adjustment is free for all deSuisse rings. Bring your ring to any of our boutiques and we will resize it for you at no additional cost.'}
         </p>
-        <p style={{ fontFamily: 'Montserrat', fontSize: 14, color: '#555', lineHeight: 2, marginBottom: 36 }}>
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#555', lineHeight: 2, marginBottom: 36 }}>
           {language === 'sq'
             ? 'Për udhëzime se si të matni madhësinë e unazës suaj, vizitoni faqen tonë të Matësit të Unazës.'
             : 'For guidance on how to measure your ring size, visit our Ring Sizer page.'}

@@ -196,7 +196,7 @@ function CategoryCarousel({ categories }: { categories: { key: string; label: st
 
 const inspirationPhotos = [
   // ↓ Replace these with your actual photos
-  // { src: '/images/inspiration-1.jpg', alt: 'DeSuisse ring on hand' },
+  // { src: '/images/inspiration-1.jpg', alt: 'deSuisse ring on hand' },
   // { src: '/images/inspiration-2.jpg', alt: 'Gold necklace close-up' },
   // { src: '/images/inspiration-3.jpg', alt: 'Wedding bands' },
   // { src: '/images/inspiration-4.jpg', alt: 'Earrings detail' },
@@ -352,7 +352,7 @@ export default function HomePage() {
         }}>
           <Image
             src={siteImages.hero}
-            alt="DeSuisse"
+            alt="deSuisse"
             fill
             style={{ objectFit: 'cover', objectPosition: 'center 30%' }}
             priority
@@ -373,8 +373,8 @@ export default function HomePage() {
           <div className="fade-up fade-up-delay-1" style={{ marginBottom: 48 }}>
             <img
               src="/images/desuisse-logo-white.png"
-              alt="DeSuisse Luxury Jewellery"
-              style={{ width: 'clamp(600px, 38vw, 380px)', height: 'auto', display: 'block' }}
+              alt="deSuisse Luxury Jewellery"
+              style={{ width: 'clamp(200px, 38vw, 380px)', height: 'auto', display: 'block' }}
             />
           </div>
           <Link href="/shop" className="btn-gold fade-up fade-up-delay-2" style={{ display: 'inline-block', fontSize: 12, letterSpacing: '0.25em' }}>
@@ -407,7 +407,7 @@ export default function HomePage() {
       {/* ── ELEVATION SECTION ── */}
       <Reveal>
         <section className="elevation-section" style={{ position: 'relative', overflow: 'hidden' }}>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', color: '#c9a84c', textTransform: 'uppercase', marginBottom: 16 }}>✦ DeSuisse ✦</p>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', color: '#c9a84c', textTransform: 'uppercase', marginBottom: 16 }}>✦ deSuisse ✦</p>
           <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(2.2rem, 4vw, 3.5rem)', fontWeight: 300, letterSpacing: '0.05em', marginBottom: 16 }}>
             {t.home.elevateSectionTitle}
           </h2>
@@ -463,7 +463,7 @@ export default function HomePage() {
       <section style={{ padding: '80px 0', background: '#f7f3ee' }}>
         <Reveal>
           <div style={{ textAlign: 'center', marginBottom: 40, padding: '0 60px' }}>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 12 }}>✦ DeSuisse</p>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 12 }}>✦ deSuisse</p>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 'clamp(2rem, 3.5vw, 3rem)', fontWeight: 300, color: '#1a0a0a', letterSpacing: '0.04em' }}>
               {t.home.inspiration}
             </h2>

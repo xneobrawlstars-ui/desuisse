@@ -78,21 +78,21 @@ export default function RingStoryPage() {
           {[1,2,3,4].map(n => (
             <div key={n} style={{ background: '#2a1a1a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 200 }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <p style={{ fontFamily: 'Montserrat', fontSize: 9, color: '#555', textAlign: 'center' }}>public/images/story-{n}.jpg</p>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#555', textAlign: 'center' }}>public/images/story-{n}.jpg</p>
             </div>
           ))}
         </div>
 
         {/* Text right side */}
         <div style={{ background: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 64px' }}>
-          <p style={{ fontFamily: 'Montserrat', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 20 }}>✦ DeSuisse</p>
-          <h1 style={{ fontFamily: 'Cormorant Garamond', fontSize: 'clamp(2rem, 4vw, 3.2rem)', fontWeight: 400, color: '#1a0a0a', lineHeight: 1.2, marginBottom: 24 }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 20 }}>✦ deSuisse</p>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(2rem, 4vw, 3.2rem)', fontWeight: 400, color: '#1a0a0a', lineHeight: 1.2, marginBottom: 24 }}>
             {t.title}
           </h1>
-          <p style={{ fontFamily: 'Montserrat', fontSize: 14, color: '#666', lineHeight: 2, marginBottom: 36 }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#666', lineHeight: 2, marginBottom: 36 }}>
             {t.intro}
           </p>
-          <Link href="#idea" onClick={(e) => { e.preventDefault(); scrollTo('idea'); }} style={{ display: 'inline-block', padding: '14px 28px', border: '1px solid #1a0a0a', color: '#1a0a0a', fontFamily: 'Montserrat', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.2s', alignSelf: 'flex-start' }}
+          <Link href="#idea" onClick={(e) => { e.preventDefault(); scrollTo('idea'); }} style={{ display: 'inline-block', padding: '14px 28px', border: '1px solid #1a0a0a', color: '#1a0a0a', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.2s', alignSelf: 'flex-start' }}
             onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = '#1a0a0a'; (e.currentTarget as HTMLAnchorElement).style.color = '#fff'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; (e.currentTarget as HTMLAnchorElement).style.color = '#1a0a0a'; }}
           >
@@ -109,7 +109,7 @@ export default function RingStoryPage() {
               <button onClick={() => scrollTo(step.key as keyof typeof sectionRefs)} style={{
                 padding: '20px 28px', background: 'none', border: 'none',
                 borderBottom: `2px solid ${activeStep === step.key ? '#c9a84c' : 'transparent'}`,
-                fontFamily: 'Montserrat', fontSize: 11, fontWeight: 600,
+                fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600,
                 letterSpacing: '0.15em', textTransform: 'uppercase',
                 color: activeStep === step.key ? '#c9a84c' : '#888',
                 cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap',
@@ -130,20 +130,20 @@ export default function RingStoryPage() {
             {i % 2 !== 0 && (
               <div style={{ background: '#f7f3ee', border: '1px dashed #e8e0d4', aspectRatio: '4/3', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#ccc' }}>public/images/story-{step.key}.jpg</p>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#ccc' }}>public/images/story-{step.key}.jpg</p>
               </div>
             )}
             <div>
-              <p style={{ fontFamily: 'Montserrat', fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 12 }}>◆ Step {i + 1}</p>
-              <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: 'clamp(2rem, 3vw, 2.8rem)', fontWeight: 400, color: '#1a0a0a', marginBottom: 20 }}>{step.title}</h2>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 12 }}>◆ Step {i + 1}</p>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(2rem, 3vw, 2.8rem)', fontWeight: 400, color: '#1a0a0a', marginBottom: 20 }}>{step.title}</h2>
               <div style={{ width: 40, height: 1, background: '#c9a84c', marginBottom: 20 }} />
-              <p style={{ fontFamily: 'Montserrat', fontSize: 14, color: '#666', lineHeight: 2 }}>{step.content}</p>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#666', lineHeight: 2 }}>{step.content}</p>
             </div>
             {/* Photo (even steps) */}
             {i % 2 === 0 && (
               <div style={{ background: '#f7f3ee', border: '1px dashed #e8e0d4', aspectRatio: '4/3', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#ccc' }}>public/images/story-{step.key}.jpg</p>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#ccc' }}>public/images/story-{step.key}.jpg</p>
               </div>
             )}
           </div>

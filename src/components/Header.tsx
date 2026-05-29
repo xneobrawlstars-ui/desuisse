@@ -72,7 +72,7 @@ export default function Header() {
             <Link href="/" style={{ display: 'flex', alignItems: 'center', flexShrink: 0, textDecoration: 'none' }}>
               <img
                 src="/images/desuisse-logo.png"
-                alt="DeSuisse Luxury Jewellery"
+                alt="deSuisse Luxury Jewellery"
                 style={{ height: 44, width: 'auto', display: 'block' }}
               />
             </Link>

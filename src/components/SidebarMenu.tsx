@@ -13,13 +13,13 @@ export default function SidebarMenu({ open, onClose }: Props) {
 
   const t = {
     home:          language === 'sq' ? 'Kryefaqja' : 'Home',
-    rings:         language === 'sq' ? 'DeSuisse Unaza' : 'DeSuisse Rings',
+    rings:         language === 'sq' ? 'deSuisse Unaza' : 'deSuisse Rings',
     engagement:    language === 'sq' ? 'Unaza Fejese' : 'Engagement Rings',
     wedding:       language === 'sq' ? 'Unaza Martese' : 'Wedding Rings',
     engraving:     language === 'sq' ? 'Gravim Falas' : 'Free Engraving',
     sizing:        language === 'sq' ? 'Madhësia dhe Shërbimi' : 'Sizing and Service',
     ringCare:      language === 'sq' ? 'Kujdesi i Unazës' : 'Ring Care',
-    jewellery:     language === 'sq' ? 'DeSuisse Bizhuteri' : 'DeSuisse Jewellery',
+    jewellery:     language === 'sq' ? 'deSuisse Bizhuteri' : 'deSuisse Jewellery',
     allRings:      language === 'sq' ? 'Unaza' : 'Rings',
     earrings:      language === 'sq' ? 'Vathë' : 'Earrings',
     necklaces:     language === 'sq' ? 'Qafore' : 'Necklaces',
@@ -29,7 +29,7 @@ export default function SidebarMenu({ open, onClose }: Props) {
     ringStory:     language === 'sq' ? 'Historia e Unazës' : 'The Story of the Ring',
     faq:           language === 'sq' ? 'Pyetjet e Shpeshta' : 'FAQ',
     aboutUs:       language === 'sq' ? 'Rreth Nesh' : 'About Us',
-    desuisse:      'DeSuisse',
+    desuisse:      'deSuisse',
     boutiques:     language === 'sq' ? 'Boutique-t' : 'Boutiques',
     ourHistory:    language === 'sq' ? 'Historia Jonë' : 'Our History',
     bookAppointment: language === 'sq' ? 'Rezervo një Takim' : 'Book Appointment',
@@ -95,7 +95,7 @@ export default function SidebarMenu({ open, onClose }: Props) {
           <Link href="/" onClick={onClose}>
             <img
               src="/images/desuisse-logo.png"
-              alt="DeSuisse Luxury Jewellery"
+              alt="deSuisse Luxury Jewellery"
               style={{ height: 38, width: 'auto', display: 'block' }}
             />
           </Link>
@@ -110,7 +110,7 @@ export default function SidebarMenu({ open, onClose }: Props) {
           {/* Home */}
           <TopLink href="/" label={t.home} />
 
-          {/* DeSuisse Rings */}
+          {/* deSuisse Rings */}
           <SectionHeader label={t.rings} section="rings" />
           {expanded === 'rings' && (
             <div style={{ paddingBottom: 8, borderBottom: '1px solid #f0ebe3' }}>
@@ -122,7 +122,7 @@ export default function SidebarMenu({ open, onClose }: Props) {
             </div>
           )}
 
-          {/* DeSuisse Jewellery */}
+          {/* deSuisse Jewellery */}
           <SectionHeader label={t.jewellery} section="jewellery" />
           {expanded === 'jewellery' && (
             <div style={{ paddingBottom: 8, borderBottom: '1px solid #f0ebe3' }}>
@@ -139,7 +139,7 @@ export default function SidebarMenu({ open, onClose }: Props) {
           <TopLink href="/ring-story" label={t.ringStory} />
           <TopLink href="/faq" label={t.faq} />
 
-          {/* DeSuisse (About) */}
+          {/* deSuisse (About) */}
           <SectionHeader label={t.desuisse} section="desuisse" />
           {expanded === 'desuisse' && (
             <div style={{ paddingBottom: 8, borderBottom: '1px solid #f0ebe3' }}>

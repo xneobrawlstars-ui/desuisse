@@ -50,7 +50,7 @@ export default function GiftVouchersPage() {
 
       {/* Page header */}
       <div style={{ background: '#f7f3ee', padding: '64px 40px', textAlign: 'center', borderBottom: '1px solid #e8e0d4' }}>
-        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 14 }}>✦ DeSuisse</p>
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 14 }}>✦ deSuisse</p>
         <h1 className="section-title">{t.title}</h1>
         <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#888', maxWidth: 500, margin: '16px auto 0', lineHeight: 1.9 }}>{t.subtitle}</p>
         <div style={{ width: 40, height: 1, background: '#c9a84c', margin: '20px auto 0' }} />
@@ -62,7 +62,7 @@ export default function GiftVouchersPage() {
           {vouchers.map(v => {
             const wishlisted = isWishlisted(v.id);
             const isHovered = hoveredId === v.id;
-            const fakeProduct = { id: v.id, name: `Gift Voucher ${v.label}`, price: v.amount, category: 'everyday-rings' as const, description: 'DeSuisse Gift Voucher', image: '', featured: false, materials: [], materialVariants: [], sizes: [] };
+            const fakeProduct = { id: v.id, name: `Gift Voucher ${v.label}`, price: v.amount, category: 'everyday-rings' as const, description: 'deSuisse Gift Voucher', image: '', featured: false, materials: [], materialVariants: [], sizes: [] };
             return (
               <div key={v.id} style={{ position: 'relative', background: '#fff', border: '1px solid #e8e0d4', transition: 'box-shadow 0.2s, transform 0.2s' }}
                 onMouseEnter={() => setHoveredId(v.id)}
@@ -74,7 +74,7 @@ export default function GiftVouchersPage() {
                   <div style={{ position: 'absolute', inset: 0, opacity: 0.06, backgroundImage: 'repeating-linear-gradient(45deg, #c9a84c 0, #c9a84c 1px, transparent 0, transparent 50%)', backgroundSize: '10px 10px' }} />
                   <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 16, position: 'relative' }}>GIFT VOUCHER</p>
                   <p style={{ fontFamily: 'var(--font-serif)', fontSize: '2.4rem', fontWeight: 300, color: '#fff', position: 'relative', letterSpacing: '0.05em' }}>{v.label}</p>
-                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#888', marginTop: 20, position: 'relative', letterSpacing: '0.15em' }}>DeSuisse Luxury Jewellery</p>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#888', marginTop: 20, position: 'relative', letterSpacing: '0.15em' }}>deSuisse Luxury Jewellery</p>
                   {/* Heart button */}
                   <button onClick={() => wishlisted ? removeFromWishlist(v.id) : addToWishlist(fakeProduct)}
                     style={{ position: 'absolute', top: 14, right: 14, background: wishlisted ? '#c9a84c' : 'rgba(255,255,255,0.15)', border: 'none', width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>

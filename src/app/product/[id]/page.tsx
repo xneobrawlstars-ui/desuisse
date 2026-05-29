@@ -243,19 +243,19 @@ function InfoTiles({ language }: { language: string }) {
   );
 }
 
-// ── DeSuisse Box — no dark background ────────────────────────
+// ── deSuisse Box — no dark background ────────────────────────
 function DesuisseBox({ language }: { language: string }) {
   return (
     <div style={{ borderTop: '1px solid #e8e0d4', borderBottom: '1px solid #e8e0d4', padding: '60px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
       <div>
-        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 14 }}>✦ DeSuisse</p>
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 14 }}>✦ deSuisse</p>
         <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(1.8rem, 3vw, 2.5rem)', fontWeight: 400, color: '#1a0a0a', marginBottom: 16 }}>
-          {language === 'sq' ? 'Kutia DeSuisse' : 'The DeSuisse Box'}
+          {language === 'sq' ? 'Kutia deSuisse' : 'The deSuisse Box'}
         </h3>
         <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#666', lineHeight: 1.9, marginBottom: 28 }}>
           {language === 'sq'
-            ? 'Çdo porosi vjen në kuti origjinale DeSuisse të mbështjellë bukur, me certifikatë autenticiteti dhe çantë luksoz. Gatishmëri e plotë si dhuratë.'
-            : 'Every order arrives in a beautifully gift-wrapped original DeSuisse box, with a certificate of authenticity and luxury bag. Ready to gift.'}
+            ? 'Çdo porosi vjen në kuti origjinale deSuisse të mbështjellë bukur, me certifikatë autenticiteti dhe çantë luksoz. Gatishmëri e plotë si dhuratë.'
+            : 'Every order arrives in a beautifully gift-wrapped original deSuisse box, with a certificate of authenticity and luxury bag. Ready to gift.'}
         </p>
         <div style={{ display: 'flex', gap: 32 }}>
           {[
@@ -284,7 +284,7 @@ function DesuisseBox({ language }: { language: string }) {
             </svg>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/desuisse-logo.png" alt="DeSuisse" style={{ height: 36, width: 'auto', display: 'block', opacity: 0.5 }} />
+          <img src="/images/desuisse-logo.png" alt="deSuisse" style={{ height: 36, width: 'auto', display: 'block', opacity: 0.5 }} />
         </div>
       </div>
     </div>
@@ -621,7 +621,7 @@ export default function ProductPage() {
         </div>
       </section>
 
-      {/* DeSuisse Box — full width, no dark background */}
+      {/* deSuisse Box — full width, no dark background */}
       <div style={{ maxWidth: 1300, margin: '0 auto', padding: '0 40px 60px' }}>
         <DesuisseBox language={language} />
       </div>

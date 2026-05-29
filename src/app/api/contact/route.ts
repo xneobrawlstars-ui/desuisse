@@ -47,7 +47,7 @@ async function sendEmail(subject: string, html: string, replyTo: string): Promis
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'DeSuisse Website <noreply@desuisse.com>',
+        from: 'deSuisse Website <noreply@desuisse.com>',
         to: [toEmail],
         reply_to: replyTo,
         subject,
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
         <h1 style="color:#c9a84c;margin:0;font-size:20px;font-weight:400;letter-spacing:2px">
           ${isMeeting ? 'MEETING REQUEST' : 'CONTACT MESSAGE'}
         </h1>
-        <p style="color:#888;margin:6px 0 0;font-size:12px">DeSuisse Website — desuisse.com</p>
+        <p style="color:#888;margin:6px 0 0;font-size:12px">deSuisse Website — desuisse.com</p>
       </div>
       <table style="width:100%;border-collapse:collapse">
         <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#888;font-size:12px;width:100px">NAME</td>

@@ -25,11 +25,11 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://desuisse.com'),
-  title: { default: 'DeSuisse — Luxury Jewellery', template: '%s — DeSuisse' },
-  description: 'Luxury jewellery from DeSuisse. Rings, earrings, bracelets and necklaces crafted with passion.',
+  title: { default: 'deSuisse — Luxury Jewellery', template: '%s — deSuisse' },
+  description: 'Luxury jewellery from deSuisse. Rings, earrings, bracelets and necklaces crafted with passion.',
   openGraph: {
-    title: 'DeSuisse — Luxury Jewellery',
-    description: 'Luxury jewellery from DeSuisse.',
+    title: 'deSuisse — Luxury Jewellery',
+    description: 'Luxury jewellery from deSuisse.',
     type: 'website',
     url: 'https://desuisse.com',
     images: ['/images/desuisse-logo.png'],

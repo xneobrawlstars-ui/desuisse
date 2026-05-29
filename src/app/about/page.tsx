@@ -29,7 +29,7 @@ export default function AboutPage() {
           <div>
             {t.about.content.split('\n\n').map((para, i) => (
               <p key={i} style={{
-                fontFamily: 'Montserrat',
+                fontFamily: 'var(--font-sans)',
                 fontSize: 14,
                 color: '#444',
                 lineHeight: 1.9,
@@ -42,7 +42,7 @@ export default function AboutPage() {
           <div style={{ position: 'relative' }}>
             <Image
               src="https://desuisse.com/wp-content/uploads/2023/12/AboutIMG.jpg"
-              alt="DeSuisse History"
+              alt="deSuisse History"
               width={600}
               height={700}
               style={{ width: '100%', height: 'auto', display: 'block' }}
@@ -80,7 +80,7 @@ export default function AboutPage() {
             <div key={i}>
               <p style={{ color: '#c9a84c', fontSize: 20, marginBottom: 12 }}>{item.icon}</p>
               <h3 style={{
-                fontFamily: 'Cormorant Garamond',
+                fontFamily: 'var(--font-serif)',
                 fontSize: '2rem',
                 fontWeight: 400,
                 color: '#fff',
@@ -88,7 +88,7 @@ export default function AboutPage() {
               }}>
                 {item.title}
               </h3>
-              <p style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#888', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#888', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
                 {item.sub}
               </p>
             </div>

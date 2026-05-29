@@ -65,7 +65,7 @@ export default function RingSizerPage() {
       <Header />
 
       <div style={{ background: '#f7f3ee', padding: '60px 40px', textAlign: 'center', borderBottom: '1px solid #e8e0d4' }}>
-        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 14 }}>◆ DeSuisse</p>
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 14 }}>◆ deSuisse</p>
         <h1 className="section-title">{t.title}</h1>
         <div style={{ width: 40, height: 1, background: '#c9a84c', margin: '18px auto 0' }} />
       </div>

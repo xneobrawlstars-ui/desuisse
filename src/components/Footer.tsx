@@ -53,7 +53,7 @@ export default function Footer() {
 
           {/* Rings */}
           <div>
-            <p className="footer-title">{language === 'sq' ? 'Unaza DeSuisse' : 'DeSuisse Rings'}</p>
+            <p className="footer-title">{language === 'sq' ? 'Unaza deSuisse' : 'deSuisse Rings'}</p>
             <Link href="/shop?category=engagement-rings" className="footer-link">{language === 'sq' ? 'Unaza Fejese' : 'Engagement Rings'}</Link>
             <Link href="/shop?category=wedding-rings"    className="footer-link">{language === 'sq' ? 'Unaza Martese' : 'Wedding Rings'}</Link>
             <Link href="/free-engraving"                 className="footer-link">{language === 'sq' ? 'Gravim Falas' : 'Free Engraving'}</Link>
@@ -63,7 +63,7 @@ export default function Footer() {
 
           {/* Jewellery */}
           <div>
-            <p className="footer-title">{language === 'sq' ? 'Bizhuteri DeSuisse' : 'DeSuisse Jewellery'}</p>
+            <p className="footer-title">{language === 'sq' ? 'Bizhuteri deSuisse' : 'deSuisse Jewellery'}</p>
             <Link href="/shop?category=everyday-rings" className="footer-link">{language === 'sq' ? 'Unaza' : 'Rings'}</Link>
             <Link href="/shop?category=earrings"       className="footer-link">{language === 'sq' ? 'Vathë' : 'Earrings'}</Link>
             <Link href="/shop?category=necklaces"      className="footer-link">{language === 'sq' ? 'Qafore' : 'Necklaces'}</Link>
@@ -81,9 +81,9 @@ export default function Footer() {
             <Link href="/ring-sizer" className="footer-link">{language === 'sq' ? 'Matësi i Unazës' : 'Ring Sizer'}</Link>
           </div>
 
-          {/* DeSuisse */}
+          {/* deSuisse */}
           <div>
-            <p className="footer-title">DeSuisse</p>
+            <p className="footer-title">deSuisse</p>
             <Link href="/about"          className="footer-link">{language === 'sq' ? 'Historia Jonë' : 'Our History'}</Link>
             <Link href="/boutiques"      className="footer-link">{language === 'sq' ? 'Boutique-t' : 'Boutiques'}</Link>
             <Link href="/custom-design"  className="footer-link">{language === 'sq' ? 'Dizajn i Personalizuar' : 'Custom Design'}</Link>
@@ -114,7 +114,7 @@ export default function Footer() {
         <div style={{ borderTop: '1px solid #2a1a1a', padding: '24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <img
             src="/images/desuisse-logo-white.png"
-            alt="DeSuisse Luxury Jewellery"
+            alt="deSuisse Luxury Jewellery"
             style={{ height: 36, width: 'auto', display: 'block', opacity: 0.7 }}
           />
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#555', letterSpacing: '0.08em' }}>

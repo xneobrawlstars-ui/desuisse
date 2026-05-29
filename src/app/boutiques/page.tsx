@@ -85,7 +85,7 @@ export default function BoutiquesPage() {
       hours: language === 'sq' ? 'E Hënë – E Shtunë: 10:00 – 18:00' : 'Monday – Saturday: 10:00 – 18:00',
       mapUrl: '',
       website: 'https://desuisse.com',
-      image: '/images/boutique-5.JPG', // Photo coming soon — placeholder will render
+      image: '', // Photo coming soon — placeholder will render
     },
   ];
 
@@ -102,7 +102,7 @@ export default function BoutiquesPage() {
       <Header />
 
       <div style={{ background: '#f7f3ee', padding: '72px 40px 60px', textAlign: 'center', borderBottom: '1px solid #e8e0d4' }}>
-        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 14 }}>✦ DeSuisse</p>
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 14 }}>✦ deSuisse</p>
         <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 400, color: '#1a0a0a', letterSpacing: '0.08em', marginBottom: 16 }}>{t.title}</h1>
         <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#888', maxWidth: 500, margin: '0 auto', lineHeight: 1.9 }}>{t.subtitle}</p>
       </div>

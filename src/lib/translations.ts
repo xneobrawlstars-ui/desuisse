@@ -15,7 +15,7 @@ export const translations = {
     banner: 'Free engraving on all rings. Discover our collections.',
     hero: {
       tag: 'LUXURY JEWELLERY',
-      title: 'DeSuisse',
+      title: 'deSuisse',
       cta: 'SHOP NOW',
     },
     home: {
@@ -29,7 +29,7 @@ export const translations = {
       },
       browsAll: 'BROWSE ALL',
       elevateSectionTitle: 'Elevate Your Look',
-      elevateSectionSub: 'Discover the special DeSuisse sets for a divine look!',
+      elevateSectionSub: 'Discover the special deSuisse sets for a divine look!',
       discoverSets: 'Discover Sets',
       featuredCollections: 'Featured Collections',
       classic: 'THE CLASSICS / New layers for everyday.',
@@ -117,7 +117,7 @@ At the age of 16, Bajram Sahatciu, as the first in the family, received an educa
       newsletterSub: 'Insider info on new arrivals, early access, and everything fine.',
       newsletterPlaceholder: 'Your email address',
       subscribe: 'Subscribe',
-      copyright: '2023 DeSuisse Jewelry',
+      copyright: '2023 deSuisse Jewelry',
     },
     admin: {
       title: 'Admin Panel',
@@ -155,7 +155,7 @@ At the age of 16, Bajram Sahatciu, as the first in the family, received an educa
     banner: 'Gravim falas në të gjitha unazat. Zbuloni koleksionet tona.',
     hero: {
       tag: 'BIZHUTERI LUKSOZE',
-      title: 'DeSuisse',
+      title: 'deSuisse',
       cta: 'BLEJ TANI',
     },
     home: {
@@ -257,7 +257,7 @@ Në moshën 16 vjeçare, Bajram Sahatciu, si i pari në familje, mori arsim në 
       newsletterSub: 'Informacion i brendshëm mbi ardhjet e reja, akses i hershëm dhe gjithçka të mirë.',
       newsletterPlaceholder: 'Adresa juaj email',
       subscribe: 'Abonohu',
-      copyright: '2023 DeSuisse Jewelry',
+      copyright: '2023 deSuisse Jewelry',
     },
     admin: {
       title: 'Paneli Administrativ',
