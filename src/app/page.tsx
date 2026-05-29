@@ -374,7 +374,7 @@ export default function HomePage() {
             <img
               src="/images/desuisse-logo-white.png"
               alt="DeSuisse Luxury Jewellery"
-              style={{ width: 'auto', height: '100', display: 'block' }}
+              style={{ width: 'auto', height: '50', display: 'block' }}
             />
           </div>
           <Link href="/shop" className="btn-gold fade-up fade-up-delay-2" style={{ display: 'inline-block', fontSize: 12, letterSpacing: '0.25em' }}>
