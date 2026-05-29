@@ -73,7 +73,7 @@ export default function Header() {
               <img
                 src="/images/desuisse-logo.png"
                 alt="DeSuisse Luxury Jewellery"
-                style={{ height: 44, width: 'auto', display: 'block' }}
+                style={{ height: 200, width: 'auto', display: 'block' }}
               />
             </Link>
 
