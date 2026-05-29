@@ -41,7 +41,7 @@ export default function SidebarMenu({ open, onClose }: Props) {
     <button onClick={() => toggle(section)} style={{
       width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '16px 0', background: 'none', border: 'none', cursor: 'pointer',
-      fontFamily: 'Montserrat', fontSize: 13, fontWeight: expanded === section ? 700 : 500,
+      fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: expanded === section ? 700 : 500,
       color: expanded === section ? '#1a0a0a' : '#333', letterSpacing: '0.06em',
       textTransform: 'none',
       borderBottom: expanded === section ? 'none' : '1px solid #f0ebe3',
@@ -58,7 +58,7 @@ export default function SidebarMenu({ open, onClose }: Props) {
   const TopLink = ({ href, label, isNew }: { href: string; label: string; isNew?: boolean }) => (
     <Link href={href} onClick={onClose} style={{
       display: 'flex', alignItems: 'center', gap: 8, padding: '14px 0',
-      fontFamily: 'Montserrat', fontSize: 13, fontWeight: 500,
+      fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500,
       color: '#333', textDecoration: 'none', letterSpacing: '0.04em',
       borderBottom: '1px solid #f0ebe3', transition: 'color 0.2s',
     }}
@@ -66,21 +66,21 @@ export default function SidebarMenu({ open, onClose }: Props) {
       onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = '#333'}
     >
       {label}
-      {isNew && <span style={{ background: '#c9a84c', color: '#1a0a0a', fontFamily: 'Montserrat', fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', padding: '2px 6px', textTransform: 'uppercase' }}>NEW</span>}
+      {isNew && <span style={{ background: '#c9a84c', color: '#1a0a0a', fontFamily: 'var(--font-sans)', fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', padding: '2px 6px', textTransform: 'uppercase' }}>NEW</span>}
     </Link>
   );
 
   const SubItem = ({ href, label, isNew }: { href: string; label: string; isNew?: boolean }) => (
     <Link href={href} onClick={onClose} style={{
       display: 'flex', alignItems: 'center', gap: 8,
-      padding: '10px 0 10px 16px', fontFamily: 'Montserrat', fontSize: 12,
+      padding: '10px 0 10px 16px', fontFamily: 'var(--font-sans)', fontSize: 12,
       color: '#666', textDecoration: 'none', letterSpacing: '0.03em', transition: 'color 0.2s',
     }}
       onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = '#c9a84c'}
       onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = '#666'}
     >
       {label}
-      {isNew && <span style={{ background: '#c9a84c', color: '#1a0a0a', fontFamily: 'Montserrat', fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', padding: '2px 5px', textTransform: 'uppercase' }}>NEW</span>}
+      {isNew && <span style={{ background: '#c9a84c', color: '#1a0a0a', fontFamily: 'var(--font-sans)', fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', padding: '2px 5px', textTransform: 'uppercase' }}>NEW</span>}
     </Link>
   );
 
@@ -94,7 +94,7 @@ export default function SidebarMenu({ open, onClose }: Props) {
         <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e8e0d4', flexShrink: 0 }}>
           <Link href="/" onClick={onClose}>
             <img
-              src="/images/desuisse-logo.svg"
+              src="/images/desuisse-logo.png"
               alt="DeSuisse Luxury Jewellery"
               style={{ height: 38, width: 'auto', display: 'block' }}
             />
@@ -151,7 +151,7 @@ export default function SidebarMenu({ open, onClose }: Props) {
 
         {/* Book appointment CTA */}
         <div style={{ padding: '20px 24px', borderTop: '1px solid #e8e0d4', flexShrink: 0 }}>
-          <Link href="/contact" onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'Montserrat', fontSize: 12, fontWeight: 600, color: '#c9a84c', textDecoration: 'none', letterSpacing: '0.06em' }}>
+          <Link href="/contact" onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: '#c9a84c', textDecoration: 'none', letterSpacing: '0.06em' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             {t.bookAppointment}
           </Link>

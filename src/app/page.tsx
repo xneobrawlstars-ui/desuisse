@@ -372,7 +372,7 @@ export default function HomePage() {
           {/* Local SVG logo — works on all devices, no external dependency */}
           <div className="fade-up fade-up-delay-1" style={{ marginBottom: 48 }}>
             <img
-              src="/images/desuisse-logo-white.svg"
+              src="/images/desuisse-logo-white.png"
               alt="DeSuisse Luxury Jewellery"
               style={{ width: 'clamp(200px, 38vw, 380px)', height: 'auto', display: 'block' }}
             />

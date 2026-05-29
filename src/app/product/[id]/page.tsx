@@ -284,7 +284,7 @@ function DesuisseBox({ language }: { language: string }) {
             </svg>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/desuisse-logo.svg" alt="DeSuisse" style={{ height: 36, width: 'auto', display: 'block', opacity: 0.5 }} />
+          <img src="/images/desuisse-logo.png" alt="DeSuisse" style={{ height: 36, width: 'auto', display: 'block', opacity: 0.5 }} />
         </div>
       </div>
     </div>

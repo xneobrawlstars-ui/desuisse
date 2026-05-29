@@ -11,7 +11,7 @@ function SocialBar({ language }: { language: string }) {
   const label = language === 'sq' ? 'NDIQNI NE' : 'FOLLOW US';
   return (
     <div style={{ borderTop: '1px solid #2a1a1a', padding: '36px 0', textAlign: 'center' }}>
-      <p style={{ fontFamily: 'Montserrat', fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#666', marginBottom: 20 }}>
+      <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#666', marginBottom: 20 }}>
         {label}
       </p>
       <div style={{ display: 'flex', justifyContent: 'center', gap: 20 }}>
@@ -94,13 +94,13 @@ export default function Footer() {
           {/* Newsletter */}
           <div>
             <p className="footer-title">{t.footer.newsletter}</p>
-            <p style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#888', lineHeight: 1.7, marginBottom: 16 }}>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#888', lineHeight: 1.7, marginBottom: 16 }}>
               {t.footer.newsletterSub}
             </p>
             <div style={{ display: 'flex', gap: 0 }}>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder={t.footer.newsletterPlaceholder}
-                style={{ flex: 1, padding: '10px 14px', border: '1px solid #333', background: '#111', color: '#fff', fontFamily: 'Montserrat', fontSize: 12, outline: 'none' }}
+                style={{ flex: 1, padding: '10px 14px', border: '1px solid #333', background: '#111', color: '#fff', fontFamily: 'var(--font-sans)', fontSize: 12, outline: 'none' }}
               />
               <button className="btn-gold" style={{ padding: '10px 20px', fontSize: 10 }}>{t.footer.subscribe}</button>
             </div>
@@ -113,11 +113,11 @@ export default function Footer() {
         {/* Bottom bar */}
         <div style={{ borderTop: '1px solid #2a1a1a', padding: '24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <img
-            src="/images/desuisse-logo-white.svg"
+            src="/images/desuisse-logo-white.png"
             alt="DeSuisse Luxury Jewellery"
             style={{ height: 36, width: 'auto', display: 'block', opacity: 0.7 }}
           />
-          <p style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#555', letterSpacing: '0.08em' }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#555', letterSpacing: '0.08em' }}>
             © {t.footer.copyright}
           </p>
         </div>

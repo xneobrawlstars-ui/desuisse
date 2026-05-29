@@ -324,7 +324,7 @@ export default function AdminPage() {
         <div style={{ background: '#fff', padding: '48px', width: '100%', maxWidth: 420, boxShadow: '0 4px 40px rgba(26,10,10,0.1)' }}>
           <div style={{ textAlign: 'center', marginBottom: 36 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/desuisse-logo.svg" alt="DeSuisse" style={{ height: 42, width: 'auto', display: 'block', margin: '0 auto' }} />
+            <img src="/images/desuisse-logo.png" alt="DeSuisse" style={{ height: 42, width: 'auto', display: 'block', margin: '0 auto' }} />
             <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 400, marginTop: 20, color: '#1a0a0a' }}>
               {t.admin.loginTitle}
             </h1>
@@ -390,7 +390,7 @@ export default function AdminPage() {
         <div style={{ padding: '0 24px 32px', borderBottom: '1px solid #2a1a1a' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/images/desuisse-logo-white.svg"
+            src="/images/desuisse-logo-white.png"
             alt="DeSuisse"
             style={{ height: 36, width: 'auto', display: 'block' }}
           />

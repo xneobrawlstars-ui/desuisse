@@ -71,7 +71,7 @@ export default function Header() {
             {/* LOGO — far left, right after hamburger */}
             <Link href="/" style={{ display: 'flex', alignItems: 'center', flexShrink: 0, textDecoration: 'none' }}>
               <img
-                src="/images/desuisse-logo.svg"
+                src="/images/desuisse-logo.png"
                 alt="DeSuisse Luxury Jewellery"
                 style={{ height: 44, width: 'auto', display: 'block' }}
               />
@@ -102,7 +102,7 @@ export default function Header() {
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
                 {wishlistCount > 0 && (
-                  <span style={{ position: 'absolute', top: -6, right: -7, background: '#c9a84c', color: '#1a0a0a', borderRadius: '50%', width: 15, height: 15, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat' }}>
+                  <span style={{ position: 'absolute', top: -6, right: -7, background: '#c9a84c', color: '#1a0a0a', borderRadius: '50%', width: 15, height: 15, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)' }}>
                     {wishlistCount}
                   </span>
                 )}
@@ -116,11 +116,11 @@ export default function Header() {
                   <path d="M16 10a4 4 0 0 1-8 0"/>
                 </svg>
                 {cartCount > 0 && (
-                  <span style={{ position: 'absolute', top: -6, right: -7, background: '#1a0a0a', color: '#fff', borderRadius: '50%', width: 15, height: 15, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat' }}>
+                  <span style={{ position: 'absolute', top: -6, right: -7, background: '#1a0a0a', color: '#fff', borderRadius: '50%', width: 15, height: 15, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)' }}>
                     {cartCount}
                   </span>
                 )}
-                <span className="desktop-only" style={{ fontFamily: 'Montserrat', fontSize: 11, fontWeight: 500, marginLeft: 2 }}>
+                <span className="desktop-only" style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 500, marginLeft: 2 }}>
                   {cartCount > 0 ? cartCount : '0'} — 0.00€
                 </span>
               </button>
