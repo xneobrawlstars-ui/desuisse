@@ -45,7 +45,7 @@ export default function BoutiquesPage() {
       hours: language === 'sq' ? 'E Hënë – E Diel: 10:00 – 19:00' : 'Monday – Sunday: 10:00 – 19:00',
       mapUrl: 'https://maps.app.goo.gl/fN3hvrF5KonRYa966',
       website: 'https://artdesuisse.com',
-      image: 'public/images/art1.jpg',
+      image: '/images/boutique-1.jpg',
     },
     {
       name: 'Art de Suisse II',
@@ -55,7 +55,7 @@ export default function BoutiquesPage() {
       hours: language === 'sq' ? 'E Hënë – E Diel: 10:00 – 19:00' : 'Monday – Sunday: 10:00 – 19:00',
       mapUrl: '',
       website: 'https://artdesuisse.com',
-      image: 'public/images/art2.jpg',
+      image: '/images/boutique-2.jpg',
     },
     {
       name: 'Art de Suisse III',
@@ -65,7 +65,7 @@ export default function BoutiquesPage() {
       hours: language === 'sq' ? 'E Hënë – E Diel: 10:00 – 19:00' : 'Monday – Sunday: 10:00 – 19:00',
       mapUrl: '',
       website: 'https://artdesuisse.com',
-      image: 'public/images/art3.webp',
+      image: '/images/boutique-3.jpg',
     },
     {
       name: 'Chopard Boutique',
@@ -75,7 +75,7 @@ export default function BoutiquesPage() {
       hours: language === 'sq' ? 'E Hënë – E Diel: 10:00 – 19:00' : 'Monday – Sunday: 10:00 – 19:00',
       mapUrl: '',
       website: 'https://artdesuisse.com',
-      image: 'public/images/chop4.jpg',
+      image: '/images/boutique-4.jpg',
     },
     {
       name: 'DeSuisse',
@@ -85,7 +85,7 @@ export default function BoutiquesPage() {
       hours: language === 'sq' ? 'E Hënë – E Shtunë: 10:00 – 18:00' : 'Monday – Saturday: 10:00 – 18:00',
       mapUrl: '',
       website: 'https://desuisse.com',
-      image: '/images/boutique-5.jpg',
+      image: '', // Photo coming soon — placeholder will render
     },
   ];
 
@@ -102,9 +102,9 @@ export default function BoutiquesPage() {
       <Header />
 
       <div style={{ background: '#f7f3ee', padding: '72px 40px 60px', textAlign: 'center', borderBottom: '1px solid #e8e0d4' }}>
-        <p style={{ fontFamily: 'Montserrat', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 14 }}>✦ DeSuisse</p>
-        <h1 style={{ fontFamily: 'Cormorant Garamond', fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 400, color: '#1a0a0a', letterSpacing: '0.08em', marginBottom: 16 }}>{t.title}</h1>
-        <p style={{ fontFamily: 'Montserrat', fontSize: 13, color: '#888', maxWidth: 500, margin: '0 auto', lineHeight: 1.9 }}>{t.subtitle}</p>
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 14 }}>✦ DeSuisse</p>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 400, color: '#1a0a0a', letterSpacing: '0.08em', marginBottom: 16 }}>{t.title}</h1>
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#888', maxWidth: 500, margin: '0 auto', lineHeight: 1.9 }}>{t.subtitle}</p>
       </div>
 
       {boutiques.map((b, i) => {
@@ -115,8 +115,8 @@ export default function BoutiquesPage() {
 
               {/* Info panel */}
               <div style={{ order: isEven ? 1 : 2, padding: '60px 64px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#fff' }}>
-                <p style={{ fontFamily: 'Montserrat', fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 12 }}>◆ Boutique</p>
-                <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: '2.2rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 20 }}>{b.name}</h2>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 12 }}>◆ Boutique</p>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 20 }}>{b.name}</h2>
                 <div style={{ width: 40, height: 1, background: '#c9a84c', marginBottom: 24 }} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
                   {[
@@ -129,20 +129,20 @@ export default function BoutiquesPage() {
                     <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                       <span style={{ marginTop: 2, flexShrink: 0 }}>{row.icon}</span>
                       {row.href ? (
-                        <a href={row.href} target="_blank" rel="noreferrer" style={{ fontFamily: 'Montserrat', fontSize: 13, color: '#c9a84c', textDecoration: 'none' }}>{row.value}</a>
+                        <a href={row.href} target="_blank" rel="noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#c9a84c', textDecoration: 'none' }}>{row.value}</a>
                       ) : (
-                        <span style={{ fontFamily: 'Montserrat', fontSize: 13, color: '#444', lineHeight: 1.5 }}>{row.value}</span>
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#444', lineHeight: 1.5 }}>{row.value}</span>
                       )}
                     </div>
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                  <Link href="/contact" style={{ display: 'inline-block', padding: '12px 24px', background: '#1a0a0a', color: '#fff', fontFamily: 'Montserrat', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', textDecoration: 'none', transition: 'background 0.2s' }}
+                  <Link href="/contact" style={{ display: 'inline-block', padding: '12px 24px', background: '#1a0a0a', color: '#fff', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', textDecoration: 'none', transition: 'background 0.2s' }}
                     onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.background = '#c9a84c'}
                     onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.background = '#1a0a0a'}
                   >{t.schedule}</Link>
                   {b.mapUrl && (
-                    <a href={b.mapUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '12px 20px', border: '1px solid #e8e0d4', color: '#666', fontFamily: 'Montserrat', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.2s' }}>
+                    <a href={b.mapUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '12px 20px', border: '1px solid #e8e0d4', color: '#666', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.2s' }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                       {t.mapLink}
                     </a>
@@ -151,14 +151,27 @@ export default function BoutiquesPage() {
               </div>
 
               {/* Photo panel */}
-              <div style={{ order: isEven ? 2 : 1, position: 'relative', minHeight: 480, background: '#e8e0d4', overflow: 'hidden' }}>
-                <Image src={b.image} alt={b.name} fill style={{ objectFit: 'cover' }} unoptimized onError={() => {}} />
-                {/* Placeholder shown when no photo */}
-                <div style={{ position: 'absolute', inset: 0, background: '#ede8e0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                  <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#bbb', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{t.photoNote}</p>
-                  <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#ccc' }}>public/images/boutique-{i + 1}.jpg</p>
-                </div>
+              <div style={{ order: isEven ? 2 : 1, position: 'relative', minHeight: 480, background: '#ede8e0', overflow: 'hidden' }}>
+                {b.image ? (
+                  <Image
+                    src={b.image}
+                    alt={b.name}
+                    fill
+                    style={{ objectFit: 'cover' }}
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    unoptimized
+                  />
+                ) : (
+                  // Elegant placeholder — only shown when no photo is set
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #ede8e0 0%, #d8cfc0 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#bba98a" strokeWidth="1">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#a89878', letterSpacing: '0.18em', textTransform: 'uppercase' }}>{t.comingSoon}</p>
+                  </div>
+                )}
               </div>
 
             </div>
