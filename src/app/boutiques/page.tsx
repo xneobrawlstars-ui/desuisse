@@ -85,7 +85,7 @@ export default function BoutiquesPage() {
       hours: language === 'sq' ? 'E Hënë – E Shtunë: 10:00 – 18:00' : 'Monday – Saturday: 10:00 – 18:00',
       mapUrl: '',
       website: 'https://desuisse.com',
-      image: '/images/boutique-5.jpg', // Photo coming soon — placeholder will render
+      image: '/images/boutique-5.JPG', // Photo coming soon — placeholder will render
     },
   ];
 
