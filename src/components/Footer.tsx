@@ -97,12 +97,12 @@ export default function Footer() {
             <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#888', lineHeight: 1.7, marginBottom: 16 }}>
               {t.footer.newsletterSub}
             </p>
-            <div style={{ display: 'flex', gap: 0 }}>
+            <div style={{ display: 'flex', gap: 0, flexWrap: 'wrap' }}>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder={t.footer.newsletterPlaceholder}
-                style={{ flex: 1, padding: '10px 14px', border: '1px solid #333', background: '#111', color: '#fff', fontFamily: 'var(--font-sans)', fontSize: 12, outline: 'none' }}
+                style={{ flex: '1 1 180px', minWidth: 0, padding: '10px 14px', border: '1px solid #333', background: '#111', color: '#fff', fontFamily: 'var(--font-sans)', fontSize: 12, outline: 'none' }}
               />
-              <button className="btn-gold" style={{ padding: '10px 20px', fontSize: 10 }}>{t.footer.subscribe}</button>
+              <button className="btn-gold" style={{ padding: '10px 18px', fontSize: 10, whiteSpace: 'nowrap', flexShrink: 0 }}>{t.footer.subscribe}</button>
             </div>
           </div>
         </div>
@@ -115,7 +115,7 @@ export default function Footer() {
           <img
             src="/images/desuisse-logo-white.png"
             alt="DeSuisse Luxury Jewellery"
-            style={{ height: 150, width: 'auto', display: 'block', opacity: 0.7 }}
+            style={{ height: 36, width: 'auto', display: 'block', opacity: 0.7 }}
           />
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#555', letterSpacing: '0.08em' }}>
             © {t.footer.copyright}
