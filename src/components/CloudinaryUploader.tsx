@@ -99,7 +99,19 @@ export default function CloudinaryUploader({ currentUrl, onUploaded, label, lang
           const response = JSON.parse(xhr.responseText);
           // secure_url is the HTTPS URL Cloudinary returns
           if (response.secure_url) {
-            onUploaded(response.secure_url);
+            // Add Cloudinary URL-based transformations so images are
+            // automatically resized + optimized for the web. Inserts
+            // `w_1600,q_auto,f_auto` right after `/upload/` so we get:
+            //   - max width 1600px (sharp on retina, light on bandwidth)
+            //   - automatic quality (Cloudinary picks the best level)
+            //   - automatic format (AVIF/WebP/JPG depending on browser)
+            // This means colleagues never need to configure Cloudinary
+            // "Upload Manipulations" — optimisation happens via the URL.
+            const optimized = response.secure_url.replace(
+              '/image/upload/',
+              '/image/upload/w_1600,q_auto,f_auto/'
+            );
+            onUploaded(optimized);
             setProgress(0);
           } else {
             setError(`${t.uploadFailed}: no URL returned`);
