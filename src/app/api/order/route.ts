@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
-
-const orderLog = new Map<string, { count: number; firstAt: number }>();
-
-function getIp(req: NextRequest) {
-  return req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
-}
+import { checkAndRecord, getClientIp } from '@/lib/rateLimit';
 
 function sanitize(s: unknown, max: number): string {
   if (typeof s !== 'string') return '';
-  return s.slice(0, max).replace(/<[^>]*>/g, '').replace(/[<>"'`]/g, '').trim();
+  // Strip HTML tags and the most dangerous quote characters.
+  // We do NOT strip apostrophes (so "O'Brien" survives).
+  return s.slice(0, max).replace(/<[^>]*>/g, '').replace(/[<>]/g, '').trim();
 }
 
 function isValidEmail(e: string): boolean {
@@ -31,15 +28,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid content type' }, { status: 415 });
   }
 
-  const ip  = getIp(req);
-  const now = Date.now();
-
-  // Rate limit: 5 orders per hour per IP
-  const state = orderLog.get(ip);
-  if (state && now - state.firstAt < 3_600_000 && state.count >= 5) {
+  const ip = getClientIp(req);
+  const limit = await checkAndRecord({ key: `order:${ip}`, max: 5, windowSeconds: 3600 });
+  if (!limit.allowed) {
     return NextResponse.json({ error: 'Too many requests' }, {
       status: 429,
-      headers: { 'Retry-After': '3600' },
+      headers: { 'Retry-After': String(Math.ceil(limit.remainingMs / 1000)) },
     });
   }
 
@@ -78,12 +72,6 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
-
-  // Record attempt
-  orderLog.set(ip, {
-    count: (!state || now - state.firstAt > 3_600_000) ? 1 : state.count + 1,
-    firstAt: (!state || now - state.firstAt > 3_600_000) ? now : state.firstAt,
-  });
 
   // Cryptographically secure order ID
   const orderId = `DS-${randomBytes(6).toString('hex').toUpperCase()}`;

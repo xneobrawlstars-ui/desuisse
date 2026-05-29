@@ -1,23 +1,26 @@
 /**
- * DeSuisse Security Library
- * Central validation, sanitization, and rate limiting utilities.
+ * Input validation and sanitisation helpers.
+ *
+ * Philosophy: sanitise minimally and rely on safe rendering. Stripping
+ * apostrophes/quotes from product names is wrong (it breaks "Women's Ring").
+ * React already HTML-escapes string children, so plain text doesn't need to
+ * be sanitised against XSS at save time. We DO strip `<...>` tags because
+ * some fields end up in email templates that render as HTML.
  */
 
-// ── Input sanitization ────────────────────────────────────────────────────────
+// ── Sanitisation ─────────────────────────────────────────────────────────
 
-/** Strip HTML tags and dangerous characters from a string */
+/** Strip HTML tags + JS protocol; keep apostrophes and quotes intact. */
 export function sanitizeText(input: string, maxLength = 500): string {
   if (typeof input !== 'string') return '';
   return input
-    .slice(0, maxLength)                          // enforce max length
-    .replace(/<[^>]*>/g, '')                      // strip HTML tags
-    .replace(/[<>"'`]/g, '')                      // strip dangerous chars
-    .replace(/javascript:/gi, '')                 // strip JS protocol
-    .replace(/on\w+\s*=/gi, '')                   // strip event handlers
+    .slice(0, maxLength)
+    .replace(/<[^>]*>/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
     .trim();
 }
 
-/** Sanitize and validate an email address */
 export function sanitizeEmail(input: string): string {
   if (typeof input !== 'string') return '';
   const clean = input.slice(0, 254).trim().toLowerCase();
@@ -25,16 +28,17 @@ export function sanitizeEmail(input: string): string {
   return emailRegex.test(clean) ? clean : '';
 }
 
-/** Sanitize a phone number — digits, spaces, +, -, () only */
 export function sanitizePhone(input: string): string {
   if (typeof input !== 'string') return '';
   return input.slice(0, 20).replace(/[^0-9+\-\s()]/g, '').trim();
 }
 
-/** Sanitize a URL — only allow http/https */
+/** Only allow http/https URLs (no javascript:, data:, file: etc.). */
 export function sanitizeUrl(input: string): string {
   if (typeof input !== 'string') return '';
   const trimmed = input.slice(0, 2048).trim();
+  // Allow local paths under /
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return trimmed;
   try {
     const url = new URL(trimmed);
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
@@ -44,45 +48,54 @@ export function sanitizeUrl(input: string): string {
   }
 }
 
-/** Sanitize a number within a range */
 export function sanitizeNumber(input: unknown, min = 0, max = 999999): number {
   const n = Number(input);
   if (isNaN(n)) return min;
   return Math.max(min, Math.min(max, Math.floor(n)));
 }
 
-/** Sanitize engraving text — letters, numbers, spaces, and safe symbols only */
+/** Engraving allows the most lenient text — letters, numbers, common symbols */
 export function sanitizeEngraving(input: string, maxLength = 30): string {
   if (typeof input !== 'string') return '';
   return input
     .slice(0, maxLength)
-    .replace(/[<>"'`\\]/g, '')
+    .replace(/[<>]/g, '')
     .trim();
 }
 
-/** Validate a card number format (digits only, 13–19 chars) */
+// ── HTML escape (use before interpolating user input into HTML) ──────────
+
+export function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ── Payment field validators (kept for client-side hints only) ───────────
+// Note: real card data should NEVER hit our server — use Stripe Elements.
+
 export function isValidCardNumber(input: string): boolean {
   const digits = input.replace(/\s/g, '');
   return /^\d{13,19}$/.test(digits);
 }
 
-/** Validate expiry MM/YY */
 export function isValidExpiry(input: string): boolean {
   if (!/^\d{2}\/\d{2}$/.test(input)) return false;
   const [mm, yy] = input.split('/').map(Number);
   if (mm < 1 || mm > 12) return false;
   const now = new Date();
   const expYear = 2000 + yy;
-  const expMonth = mm;
-  return expYear > now.getFullYear() || (expYear === now.getFullYear() && expMonth >= now.getMonth() + 1);
+  return expYear > now.getFullYear() || (expYear === now.getFullYear() && mm >= now.getMonth() + 1);
 }
 
-/** Validate CVV (3–4 digits) */
 export function isValidCVV(input: string): boolean {
   return /^\d{3,4}$/.test(input);
 }
 
-// ── Payload size limits ────────────────────────────────────────────────────────
+// ── Field-length limits ──────────────────────────────────────────────────
 
 export const LIMITS = {
   NAME: 100,
@@ -101,119 +114,8 @@ export const LIMITS = {
   CARD_NAME: 100,
 } as const;
 
-/** Reject if any string field exceeds its limit */
-export function checkPayloadSize(data: Record<string, unknown>, limits: Record<string, number>): string | null {
-  for (const [key, limit] of Object.entries(limits)) {
-    const val = data[key];
-    if (typeof val === 'string' && val.length > limit) {
-      return `Field "${key}" exceeds maximum length of ${limit} characters.`;
-    }
-  }
-  return null;
-}
+// ── Product shape validation ─────────────────────────────────────────────
 
-// ── Client-side rate limiting ─────────────────────────────────────────────────
-// Since this is a Next.js client app with no backend auth endpoint,
-// rate limiting is enforced in-browser via localStorage timestamps.
-// For production, move auth to a Next.js API route with server-side rate limiting.
-
-interface RateLimitState {
-  attempts: number;
-  firstAttemptAt: number;
-  lockedUntil: number;
-}
-
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const RATE_LIMIT_MAX_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000;  // 15 minute lockout
-
-export function getRateLimitState(key: string): RateLimitState {
-  if (typeof window === 'undefined') return { attempts: 0, firstAttemptAt: 0, lockedUntil: 0 };
-  try {
-    const raw = localStorage.getItem(`rl_${key}`);
-    if (!raw) return { attempts: 0, firstAttemptAt: 0, lockedUntil: 0 };
-    return JSON.parse(raw) as RateLimitState;
-  } catch {
-    return { attempts: 0, firstAttemptAt: 0, lockedUntil: 0 };
-  }
-}
-
-export function recordAttempt(key: string): RateLimitState {
-  if (typeof window === 'undefined') return { attempts: 0, firstAttemptAt: 0, lockedUntil: 0 };
-  const now = Date.now();
-  const state = getRateLimitState(key);
-
-  // Reset if window expired
-  const windowExpired = now - state.firstAttemptAt > RATE_LIMIT_WINDOW_MS;
-  const lockedOut = state.lockedUntil > now;
-
-  let next: RateLimitState;
-
-  if (lockedOut) {
-    // Still locked — don't increment, just return current state
-    return state;
-  } else if (windowExpired || state.attempts === 0) {
-    // Fresh window
-    next = { attempts: 1, firstAttemptAt: now, lockedUntil: 0 };
-  } else {
-    const newAttempts = state.attempts + 1;
-    const shouldLock = newAttempts >= RATE_LIMIT_MAX_ATTEMPTS;
-    next = {
-      attempts: newAttempts,
-      firstAttemptAt: state.firstAttemptAt,
-      lockedUntil: shouldLock ? now + LOCKOUT_DURATION_MS : 0,
-    };
-  }
-
-  localStorage.setItem(`rl_${key}`, JSON.stringify(next));
-  return next;
-}
-
-export function clearRateLimit(key: string): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(`rl_${key}`);
-  }
-}
-
-export function isRateLimited(key: string): { limited: boolean; remainingMs: number; attemptsLeft: number } {
-  const state = getRateLimitState(key);
-  const now = Date.now();
-
-  if (state.lockedUntil > now) {
-    return { limited: true, remainingMs: state.lockedUntil - now, attemptsLeft: 0 };
-  }
-
-  const windowExpired = now - state.firstAttemptAt > RATE_LIMIT_WINDOW_MS;
-  if (windowExpired) {
-    return { limited: false, remainingMs: 0, attemptsLeft: RATE_LIMIT_MAX_ATTEMPTS };
-  }
-
-  const attemptsLeft = Math.max(0, RATE_LIMIT_MAX_ATTEMPTS - state.attempts);
-  return { limited: attemptsLeft === 0, remainingMs: 0, attemptsLeft };
-}
-
-/** Format remaining lockout time as human-readable string */
-export function formatLockoutTime(ms: number): string {
-  const minutes = Math.ceil(ms / 60000);
-  return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
-}
-
-// ── localStorage data validation ──────────────────────────────────────────────
-
-/** Safely parse JSON from localStorage with a fallback */
-export function safeLocalStorageGet<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    return parsed ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-/** Validate that a product object from localStorage has expected shape */
 export function isValidProduct(p: unknown): boolean {
   if (!p || typeof p !== 'object') return false;
   const obj = p as Record<string, unknown>;

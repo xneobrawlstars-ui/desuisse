@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import { useLanguage } from '@/lib/LanguageContext';
 import { fetchProducts, Product, CATEGORIES } from '@/data/products';
+import { DEFAULT_SITE_IMAGES, SiteImages } from '@/lib/siteImages';
 
 // ── Parallax hook ─────────────────────────────────────────────
 function useParallax(speed = 0.4) {
@@ -173,7 +174,7 @@ function CategoryCarousel({ categories }: { categories: { key: string; label: st
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,10,10,0)', transition: 'background 0.4s' }} className="cat-overlay" />
               </div>
               <div style={{ padding: '12px 0 6px', textAlign: 'center' }}>
-                <h3 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.2rem', fontWeight: 400, color: '#1a0a0a', letterSpacing: '0.04em' }}>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', fontWeight: 400, color: '#1a0a0a', letterSpacing: '0.04em' }}>
                   {cat.label}
                 </h3>
               </div>
@@ -276,10 +277,10 @@ function InspirationCarousel({ language }: { language: string }) {
                     <polyline points="21 15 16 10 5 21"/>
                   </svg>
                   <div style={{ textAlign: 'center' }}>
-                    <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#bbb', letterSpacing: '0.08em', marginBottom: 4 }}>
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#bbb', letterSpacing: '0.08em', marginBottom: 4 }}>
                       {language === 'sq' ? 'Shtoni foto' : 'Add photo'}
                     </p>
-                    <p style={{ fontFamily: 'Montserrat', fontSize: 9, color: '#ccc', letterSpacing: '0.05em' }}>
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#ccc', letterSpacing: '0.05em' }}>
                       public/images/{photo.label}
                     </p>
                   </div>
@@ -315,21 +316,26 @@ function InspirationCarousel({ language }: { language: string }) {
 export default function HomePage() {
   const { t, language } = useLanguage();
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [siteImages, setSiteImages] = useState<SiteImages>(DEFAULT_SITE_IMAGES);
   const parallax = useParallax(0.35);
 
   useEffect(() => {
     fetchProducts().then(products => {
       setFeaturedProducts(products.filter(p => p.featured));
     });
+    // Load site images from database
+    fetch('/api/site-images').then(r => r.json()).then(data => {
+      if (data && typeof data === 'object') setSiteImages({ ...DEFAULT_SITE_IMAGES, ...data });
+    }).catch(() => {});
   }, []);
 
   const categories = [
-    { key: 'everyday-rings', label: language === 'sq' ? 'Unaza të Përditshme' : 'Everyday Rings', img: 'https://desuisse.com/wp-content/uploads/2023/12/Unaza-430x538.jpg', href: '/shop?category=everyday-rings' },
-    { key: 'engagement-rings', label: language === 'sq' ? 'Unaza Fejese' : 'Engagement Rings', img: 'https://desuisse.com/wp-content/uploads/2024/09/IMG_8583-700x700.jpg', href: '/shop?category=engagement-rings' },
-    { key: 'wedding-rings', label: language === 'sq' ? 'Unaza Martese' : 'Wedding Rings', img: 'https://desuisse.com/wp-content/uploads/2024/09/IMG_8865-700x700.jpg', href: '/shop?category=wedding-rings' },
-    { key: 'earrings', label: language === 'sq' ? 'Vathë' : 'Earrings', img: 'https://desuisse.com/wp-content/uploads/2023/12/Vathe-430x538.jpg', href: '/shop?category=earrings' },
-    { key: 'bracelets', label: language === 'sq' ? 'Byzylykë' : 'Bracelets', img: 'https://desuisse.com/wp-content/uploads/2023/12/Byzylyk-430x538.jpg', href: '/shop?category=bracelets' },
-    { key: 'necklaces', label: language === 'sq' ? 'Qafore' : 'Necklaces', img: 'https://desuisse.com/wp-content/uploads/2023/12/Qafore-430x538.jpg', href: '/shop?category=necklaces' },
+    { key: 'everyday-rings',   label: language === 'sq' ? 'Unaza të Përditshme' : 'Everyday Rings',   img: siteImages.catEveryday,   href: '/shop?category=everyday-rings' },
+    { key: 'engagement-rings', label: language === 'sq' ? 'Unaza Fejese' : 'Engagement Rings',         img: siteImages.catEngagement, href: '/shop?category=engagement-rings' },
+    { key: 'wedding-rings',    label: language === 'sq' ? 'Unaza Martese' : 'Wedding Rings',           img: siteImages.catWedding,    href: '/shop?category=wedding-rings' },
+    { key: 'earrings',         label: language === 'sq' ? 'Vathë' : 'Earrings',                       img: siteImages.catEarrings,   href: '/shop?category=earrings' },
+    { key: 'bracelets',        label: language === 'sq' ? 'Byzylykë' : 'Bracelets',                   img: siteImages.catBracelets,  href: '/shop?category=bracelets' },
+    { key: 'necklaces',        label: language === 'sq' ? 'Qafore' : 'Necklaces',                     img: siteImages.catNecklaces,  href: '/shop?category=necklaces' },
   ];
 
   return (
@@ -345,7 +351,7 @@ export default function HomePage() {
           willChange: 'transform',
         }}>
           <Image
-            src="/images/hero-ring.jpg"
+            src={siteImages.hero}
             alt="DeSuisse"
             fill
             style={{ objectFit: 'cover', objectPosition: 'center 30%' }}
@@ -360,19 +366,15 @@ export default function HomePage() {
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #1a0a0a 0%, #3d1a1a 50%, #6b0f1a 100%)', zIndex: -1 }} />
         {/* Hero content */}
         <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#fff', padding: '0 40px' }}>
-          <p className="fade-up" style={{ fontFamily: 'Montserrat', fontSize: 11, letterSpacing: '0.5em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 28 }}>
-            {t.hero.tag}
+          <p className="fade-up" style={{ fontFamily: 'var(--font-sans)', fontSize: 11, letterSpacing: '0.5em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 28 }}>
+            LUXURY JEWELLERY
           </p>
-          {/* White logo instead of text */}
+          {/* Local SVG logo — works on all devices, no external dependency */}
           <div className="fade-up fade-up-delay-1" style={{ marginBottom: 48 }}>
-            <Image
-              src="https://desuisse.com/wp-content/uploads/2023/02/desuisselogo-2.png"
-              alt="DeSuisse"
-              width={420}
-              height={120}
-              style={{ objectFit: 'contain', width: 'clamp(220px, 35vw, 420px)', height: 'auto', filter: 'brightness(0) invert(1)', opacity: 0.95 }}
-              priority
-              unoptimized
+            <img
+              src="/images/desuisse-logo-white.svg"
+              alt="DeSuisse Luxury Jewellery"
+              style={{ width: 'clamp(200px, 38vw, 380px)', height: 'auto', display: 'block' }}
             />
           </div>
           <Link href="/shop" className="btn-gold fade-up fade-up-delay-2" style={{ display: 'inline-block', fontSize: 12, letterSpacing: '0.25em' }}>
@@ -389,7 +391,7 @@ export default function HomePage() {
       <section style={{ padding: '100px 60px', maxWidth: 1400, margin: '0 auto' }} className="home-section-pad">
         <Reveal>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <p style={{ fontFamily: 'Montserrat', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 12 }}>✦ Collections</p>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 12 }}>✦ Collections</p>
             <h2 className="section-title">{t.home.categoriesTitle}</h2>
             <p className="section-subtitle" style={{ marginTop: 14, maxWidth: 500, margin: '14px auto 0' }}>{t.home.categoriesSubtitle}</p>
           </div>
@@ -405,11 +407,11 @@ export default function HomePage() {
       {/* ── ELEVATION SECTION ── */}
       <Reveal>
         <section className="elevation-section" style={{ position: 'relative', overflow: 'hidden' }}>
-          <p style={{ fontFamily: 'Montserrat', fontSize: 10, letterSpacing: '0.4em', color: '#c9a84c', textTransform: 'uppercase', marginBottom: 16 }}>✦ DeSuisse ✦</p>
-          <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: 'clamp(2.2rem, 4vw, 3.5rem)', fontWeight: 300, letterSpacing: '0.05em', marginBottom: 16 }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', color: '#c9a84c', textTransform: 'uppercase', marginBottom: 16 }}>✦ DeSuisse ✦</p>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(2.2rem, 4vw, 3.5rem)', fontWeight: 300, letterSpacing: '0.05em', marginBottom: 16 }}>
             {t.home.elevateSectionTitle}
           </h2>
-          <p style={{ fontFamily: 'Montserrat', fontSize: 13, color: '#888', marginBottom: 36, letterSpacing: '0.05em' }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#888', marginBottom: 36, letterSpacing: '0.05em' }}>
             {t.home.elevateSectionSub}
           </p>
           <Link href="/shop" className="btn-gold">{t.home.discoverSets}</Link>
@@ -423,8 +425,8 @@ export default function HomePage() {
         </Reveal>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} className="home-collections-grid">
           {[
-            { src: 'https://desuisse.com/wp-content/uploads/2023/02/IMG_9803-scaled.jpg', label: t.home.classic },
-            { src: 'https://desuisse.com/wp-content/uploads/2023/02/IMG_2648_Original-scaled.jpg', label: t.home.parker },
+            { src: siteImages.collectionClassic, label: t.home.classic },
+            { src: siteImages.collectionParker,  label: t.home.parker },
           ].map((col, i) => (
             <Reveal key={i} delay={i * 120}>
               <div className="collection-card" style={{ height: 500 }}>
@@ -461,8 +463,8 @@ export default function HomePage() {
       <section style={{ padding: '80px 0', background: '#f7f3ee' }}>
         <Reveal>
           <div style={{ textAlign: 'center', marginBottom: 40, padding: '0 60px' }}>
-            <p style={{ fontFamily: 'Montserrat', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 12 }}>✦ DeSuisse</p>
-            <h2 style={{ fontFamily: 'Cormorant Garamond', fontStyle: 'italic', fontSize: 'clamp(2rem, 3.5vw, 3rem)', fontWeight: 300, color: '#1a0a0a', letterSpacing: '0.04em' }}>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#c9a84c', marginBottom: 12 }}>✦ DeSuisse</p>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 'clamp(2rem, 3.5vw, 3rem)', fontWeight: 300, color: '#1a0a0a', letterSpacing: '0.04em' }}>
               {t.home.inspiration}
             </h2>
             <div style={{ width: 40, height: 1, background: '#c9a84c', margin: '18px auto 0' }} />

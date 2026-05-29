@@ -1,3 +1,12 @@
+/**
+ * Product types + client-side helpers.
+ *
+ * Important: products live ONLY in Upstash. There is no localStorage cache —
+ * that was masking failures (admin would see their changes locally and
+ * assume save worked, while other devices saw nothing). If a save fails,
+ * the admin UI MUST surface the error so the operator knows to fix env
+ * vars instead of silently being out of sync.
+ */
 export interface MaterialVariant {
   name: string;
   price: number;
@@ -17,8 +26,8 @@ export interface Product {
   price: number;
   priceMax?: number;
   category: Category;
-  description: string;       // English description
-  descriptionSq?: string;    // Albanian description
+  description: string;       // English
+  descriptionSq?: string;    // Albanian
   image: string;
   image2?: string;
   featured: boolean;
@@ -50,13 +59,9 @@ export const CATEGORIES: { key: Category; en: string; sq: string }[] = [
   { key: 'necklaces',        en: 'Necklaces',        sq: 'Qafore' },
 ];
 
-export const DEFAULT_PRODUCTS: Product[] = [
-  // Products are managed through the Admin panel (/admin)
-  // They are stored in the database and loaded automatically
-  // Add your first product at /admin after deploying
-];
+export const DEFAULT_PRODUCTS: Product[] = [];
 
-// ── Client-side: fetch from API only — localStorage is device-specific ──
+// ── Fetch from API (the only source of truth, shared across all devices) ──
 export async function fetchProducts(): Promise<Product[]> {
   try {
     const res = await fetch('/api/products', {
@@ -65,67 +70,42 @@ export async function fetchProducts(): Promise<Product[]> {
     });
     if (!res.ok) throw new Error(`API error ${res.status}`);
     const data = await res.json();
-    if (Array.isArray(data)) return data;
-    return [];
+    return Array.isArray(data) ? data : [];
   } catch (err) {
     console.error('[fetchProducts] error:', err);
-    return []; // Return empty — never fall back to localStorage (device-specific)
+    return [];
   }
 }
 
-// ── Save products via API (admin only) ──────────────────────────
-export async function saveProductsToDb(products: Product[]): Promise<boolean> {
+/**
+ * Save products via the API. Returns a result object so callers can show
+ * a precise error to the admin (e.g. "Upstash env vars missing").
+ */
+export interface SaveResult {
+  ok: boolean;
+  status: number;
+  error?: string;
+  hint?: string;
+}
+
+export async function saveProductsToDb(products: Product[]): Promise<SaveResult> {
   try {
     const res = await fetch('/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // CRITICAL: sends the admin session cookie
+      credentials: 'include',
       body: JSON.stringify(products),
     });
-    if (res.ok) {
-      // Also cache in localStorage as backup for this device
-      saveProducts(products);
-      return true;
-    }
-    const err = await res.json().catch(() => ({}));
-    console.error('[saveProductsToDb] failed:', res.status, err);
-    return false;
+    if (res.ok) return { ok: true, status: res.status };
+    const body = await res.json().catch(() => ({}));
+    return {
+      ok: false,
+      status: res.status,
+      error: body.error || `HTTP ${res.status}`,
+      hint: body.hint,
+    };
   } catch (err) {
-    console.error('[saveProductsToDb] network error:', err);
-    return false;
-  }
-}
-
-// ── Legacy localStorage helpers (kept as fallback) ──────────────
-export function getProductsFromStorage(): Product[] {
-  if (typeof window === 'undefined') return DEFAULT_PRODUCTS;
-  const stored = localStorage.getItem('ds-products');
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
-      return parsed.map((p: Product) => {
-        const result = { ...p };
-        if (!result.materials) result.materials = [];
-        if (!result.sizes) result.sizes = [];
-        if (!result.materialVariants) result.materialVariants = [];
-        if (!result.stones) result.stones = [];
-        if (!result.stoneSizes) result.stoneSizes = [];
-        if ((result.category as string) === 'rings') result.category = 'everyday-rings';
-        return result;
-      });
-    } catch { return DEFAULT_PRODUCTS; }
-  }
-  return DEFAULT_PRODUCTS;
-}
-
-// Keep getProducts as sync fallback for non-admin pages
-export function getProducts(): Product[] {
-  return getProductsFromStorage();
-}
-
-export function saveProducts(products: Product[]): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('ds-products', JSON.stringify(products));
+    return { ok: false, status: 0, error: 'Network error: ' + String(err) };
   }
 }
 

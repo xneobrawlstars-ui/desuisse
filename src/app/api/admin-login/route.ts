@@ -1,48 +1,29 @@
 /**
- * Server-side admin login — fully secured.
- * - IP-based rate limiting (5 attempts / 15 min)
- * - Constant-time password comparison (no timing attacks)
- * - Cryptographically secure session token (randomBytes, not Math.random)
- * - httpOnly + Secure + SameSite=strict cookie
- * - Password never in NEXT_PUBLIC_ — stays server-only
+ * Admin login.
+ *
+ * SECURITY FIXES vs the previous version:
+ *  1. Session tokens are stored server-side in Upstash with TTL.
+ *     Forged cookies (e.g. devtools-set 64-char strings) no longer pass.
+ *  2. Rate limit state lives in Upstash, not an in-memory Map, so it
+ *     survives Vercel cold starts.
+ *  3. Constant-time password comparison via crypto.timingSafeEqual.
+ *  4. httpOnly + Secure + SameSite=strict cookie.
+ *
+ * Setup notes for the operator:
+ *  - ADMIN_PASSWORD: a long, random string. Set in Vercel env vars.
+ *  - UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN: required.
+ *    Without these, login will refuse (we cannot persist sessions
+ *    securely without a shared store).
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { createHash, timingSafeEqual, randomBytes } from 'crypto';
-
-const attempts = new Map<string, { count: number; firstAt: number; lockedUntil: number }>();
+import { createHash, timingSafeEqual } from 'crypto';
+import { createSession, SESSION_COOKIE_NAME } from '@/lib/session';
+import { checkAndRecord, clear, getClientIp } from '@/lib/rateLimit';
+import { isUpstashConfigured } from '@/lib/upstash';
 
 const MAX_ATTEMPTS = 5;
-const WINDOW_MS    = 15 * 60 * 1000;
-const LOCKOUT_MS   = 15 * 60 * 1000;
-const SESSION_TTL  = 60 * 60 * 2; // 2 hours in seconds
-
-function getIp(req: NextRequest): string {
-  return (
-    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    req.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
-
-function checkLimit(ip: string): { allowed: boolean; remainingMs: number } {
-  const now   = Date.now();
-  const state = attempts.get(ip);
-  if (!state) return { allowed: true, remainingMs: 0 };
-  if (state.lockedUntil > now) return { allowed: false, remainingMs: state.lockedUntil - now };
-  if (now - state.firstAt > WINDOW_MS) { attempts.delete(ip); return { allowed: true, remainingMs: 0 }; }
-  return { allowed: state.count < MAX_ATTEMPTS, remainingMs: 0 };
-}
-
-function recordFail(ip: string): void {
-  const now   = Date.now();
-  const state = attempts.get(ip);
-  if (!state || now - state.firstAt > WINDOW_MS) {
-    attempts.set(ip, { count: 1, firstAt: now, lockedUntil: 0 });
-    return;
-  }
-  const c = state.count + 1;
-  attempts.set(ip, { count: c, firstAt: state.firstAt, lockedUntil: c >= MAX_ATTEMPTS ? now + LOCKOUT_MS : 0 });
-}
+const WINDOW_SECONDS = 15 * 60;   // 15 minutes
+const SESSION_TTL_SECONDS = 60 * 60 * 2; // 2 hours
 
 function safeCompare(a: string, b: string): boolean {
   const ha = createHash('sha256').update(a).digest();
@@ -51,19 +32,26 @@ function safeCompare(a: string, b: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  // Reject non-JSON content-type
-  const ct = req.headers.get('content-type') ?? '';
-  if (!ct.includes('application/json')) {
+  if (!(req.headers.get('content-type') ?? '').includes('application/json')) {
     return NextResponse.json({ error: 'Invalid content type' }, { status: 415 });
   }
 
-  const ip = getIp(req);
-  const limit = checkLimit(ip);
+  if (!isUpstashConfigured()) {
+    console.error('[admin-login] Refusing to authenticate — Upstash not configured');
+    return NextResponse.json(
+      { error: 'Server not fully configured. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in Vercel env vars.' },
+      { status: 500 },
+    );
+  }
+
+  const ip = getClientIp(req);
+  const rateKey = `login:${ip}`;
+  const limit = await checkAndRecord({ key: rateKey, max: MAX_ATTEMPTS, windowSeconds: WINDOW_SECONDS });
 
   if (!limit.allowed) {
     return NextResponse.json(
       { error: 'Too many attempts', remainingMs: limit.remainingMs },
-      { status: 429, headers: { 'Retry-After': String(Math.ceil(limit.remainingMs / 1000)) } }
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(limit.remainingMs / 1000)) } },
     );
   }
 
@@ -77,35 +65,34 @@ export async function POST(req: NextRequest) {
 
   const { password } = body as Record<string, unknown>;
   if (typeof password !== 'string' || password.length < 1 || password.length > 128) {
-    recordFail(ip);
-    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    return NextResponse.json({ error: 'Invalid credentials', attemptsLeft: limit.attemptsLeft }, { status: 401 });
   }
 
   const serverPwd = process.env.ADMIN_PASSWORD ?? '';
   if (!serverPwd) {
-    console.error('[auth] ADMIN_PASSWORD not configured');
+    console.error('[admin-login] ADMIN_PASSWORD not configured');
     return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
   }
 
   if (!safeCompare(password, serverPwd)) {
-    recordFail(ip);
-    const newState = attempts.get(ip);
-    const attemptsLeft = newState ? Math.max(0, MAX_ATTEMPTS - newState.count) : MAX_ATTEMPTS;
-    return NextResponse.json({ error: 'Invalid credentials', attemptsLeft }, { status: 401 });
+    return NextResponse.json({ error: 'Invalid credentials', attemptsLeft: limit.attemptsLeft }, { status: 401 });
   }
 
-  // Success — clear rate limit
-  attempts.delete(ip);
+  // Success — clear the rate counter so the window resets for this IP
+  await clear(rateKey);
 
-  // Cryptographically secure session token (not Math.random)
-  const sessionToken = randomBytes(32).toString('hex');
+  // Create a server-side session
+  const token = await createSession();
+  if (!token) {
+    return NextResponse.json({ error: 'Could not create session. Check Upstash configuration.' }, { status: 500 });
+  }
 
   const res = NextResponse.json({ success: true }, { status: 200 });
-  res.cookies.set('ds_admin_session', sessionToken, {
+  res.cookies.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    maxAge: SESSION_TTL,
+    maxAge: SESSION_TTL_SECONDS,
     path: '/',
   });
   return res;

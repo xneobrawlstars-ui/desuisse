@@ -1,16 +1,32 @@
+/**
+ * Contact / meeting-request form. Sends mail via Resend.
+ * Rate limited per IP via durable Upstash counter (3 / hour).
+ */
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAndRecord, getClientIp } from '@/lib/rateLimit';
 
-const submissions = new Map<string, { count: number; firstAt: number }>();
-const MAX = 3;
-const WINDOW = 3_600_000;
-
-function getIp(req: NextRequest) {
-  return req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
-}
+const MAX_PER_HOUR = 3;
+const WINDOW_SECONDS = 3600;
 
 function sanitize(s: unknown, max: number): string {
   if (typeof s !== 'string') return '';
-  return s.slice(0, max).replace(/<[^>]*>/g, '').replace(/[<>"'`]/g, '').replace(/javascript:/gi, '').trim();
+  // Strip HTML tags and script-injection vectors. Email is rendered as HTML,
+  // so we DO need to keep this strict.
+  return s
+    .slice(0, max)
+    .replace(/<[^>]*>/g, '')
+    .replace(/javascript:/gi, '')
+    .trim();
+}
+
+/** HTML-escape for safe interpolation into the email template. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function isValidEmail(e: string): boolean {
@@ -22,19 +38,14 @@ async function sendEmail(subject: string, html: string, replyTo: string): Promis
   const toEmail = process.env.CONTACT_EMAIL ?? 'info@desuisse.com';
 
   if (!apiKey) {
-    console.error('[email] RESEND_API_KEY environment variable is not set');
+    console.error('[contact] RESEND_API_KEY not set');
     return { ok: false, error: 'RESEND_API_KEY not configured' };
   }
-
-  console.log(`[email] Sending to: ${toEmail}, reply-to: ${replyTo}`);
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: 'DeSuisse Website <noreply@desuisse.com>',
         to: [toEmail],
@@ -44,34 +55,33 @@ async function sendEmail(subject: string, html: string, replyTo: string): Promis
       }),
     });
 
-    const data = await res.json() as Record<string, unknown>;
-
     if (!res.ok) {
-      console.error('[email] Resend API error:', res.status, JSON.stringify(data));
-      return { ok: false, error: `Resend error ${res.status}: ${JSON.stringify(data)}` };
+      const data = await res.json().catch(() => ({}));
+      console.error('[contact] Resend error:', res.status, data);
+      return { ok: false, error: `Resend ${res.status}` };
     }
-
-    console.log('[email] Sent successfully. ID:', data.id);
     return { ok: true };
   } catch (err) {
-    console.error('[email] Network error:', err);
+    console.error('[contact] Network error:', err);
     return { ok: false, error: String(err) };
   }
 }
 
 export async function POST(req: NextRequest) {
-  const ct = req.headers.get('content-type') ?? '';
-  if (!ct.includes('application/json')) {
+  if (!(req.headers.get('content-type') ?? '').includes('application/json')) {
     return NextResponse.json({ error: 'Invalid content type' }, { status: 415 });
   }
 
-  const ip  = getIp(req);
-  const now = Date.now();
-  const state = submissions.get(ip);
+  const ip = getClientIp(req);
+  const limit = await checkAndRecord({
+    key: `contact:${ip}`,
+    max: MAX_PER_HOUR,
+    windowSeconds: WINDOW_SECONDS,
+  });
 
-  if (state && now - state.firstAt < WINDOW && state.count >= MAX) {
+  if (!limit.allowed) {
     return NextResponse.json({ error: 'Too many submissions. Try again later.' }, {
-      status: 429, headers: { 'Retry-After': '3600' },
+      status: 429, headers: { 'Retry-After': String(Math.ceil(limit.remainingMs / 1000)) },
     });
   }
 
@@ -91,19 +101,21 @@ export async function POST(req: NextRequest) {
   const message = sanitize(b.message, 2000);
   const type    = sanitize(b.type, 20) || 'contact';
 
-  if (!name)                return NextResponse.json({ error: 'Name required' }, { status: 400 });
-  if (!isValidEmail(email)) return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
+  if (!name)                          return NextResponse.json({ error: 'Name required' }, { status: 400 });
+  if (!isValidEmail(email))           return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
   if (!message || message.length < 2) return NextResponse.json({ error: 'Message too short' }, { status: 400 });
-
-  submissions.set(ip, {
-    count: (!state || now - state.firstAt > WINDOW) ? 1 : state.count + 1,
-    firstAt: (!state || now - state.firstAt > WINDOW) ? now : state.firstAt,
-  });
 
   const isMeeting = type === 'meeting';
   const subject = isMeeting
     ? `📅 New Meeting Request — ${name}`
     : `✉️ New Contact Message — ${name}`;
+
+  // ALL user input is HTML-escaped before being interpolated into the email body.
+  const eName = escapeHtml(name);
+  const eEmail = escapeHtml(email);
+  const ePhone = escapeHtml(phone);
+  const eCompany = escapeHtml(company);
+  const eMessage = escapeHtml(message).replace(/\n/g, '<br>');
 
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px">
@@ -115,30 +127,27 @@ export async function POST(req: NextRequest) {
       </div>
       <table style="width:100%;border-collapse:collapse">
         <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#888;font-size:12px;width:100px">NAME</td>
-            <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#1a0a0a"><strong>${name}</strong></td></tr>
+            <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#1a0a0a"><strong>${eName}</strong></td></tr>
         <tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#888;font-size:12px">EMAIL</td>
-            <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px"><a href="mailto:${email}" style="color:#c9a84c">${email}</a></td></tr>
+            <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px"><a href="mailto:${eEmail}" style="color:#c9a84c">${eEmail}</a></td></tr>
         ${phone ? `<tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#888;font-size:12px">PHONE</td>
-            <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#1a0a0a">${phone}</td></tr>` : ''}
+            <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#1a0a0a">${ePhone}</td></tr>` : ''}
         ${company ? `<tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#888;font-size:12px">COMPANY</td>
-            <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#1a0a0a">${company}</td></tr>` : ''}
+            <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#1a0a0a">${eCompany}</td></tr>` : ''}
       </table>
       <div style="margin-top:24px;padding:16px;background:#f7f3ee;border-left:3px solid #c9a84c">
         <p style="margin:0 0 8px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px">MESSAGE</p>
-        <p style="margin:0;font-size:14px;color:#1a0a0a;line-height:1.7">${message.replace(/\n/g, '<br>')}</p>
+        <p style="margin:0;font-size:14px;color:#1a0a0a;line-height:1.7">${eMessage}</p>
       </div>
       <p style="margin-top:24px;font-size:11px;color:#bbb;text-align:center">
-        Sent from desuisse.com — Reply directly to <a href="mailto:${email}" style="color:#c9a84c">${email}</a>
+        Sent from desuisse.com — Reply directly to <a href="mailto:${eEmail}" style="color:#c9a84c">${eEmail}</a>
       </p>
     </div>
   `;
 
   const emailResult = await sendEmail(subject, html, email);
-
   if (!emailResult.ok) {
-    // Still return success to the user — don't expose internal errors
-    console.error('[contact] Email failed but returning success to user:', emailResult.error);
+    console.error('[contact] Email failed:', emailResult.error);
   }
-
   return NextResponse.json({ success: true }, { status: 200 });
 }
