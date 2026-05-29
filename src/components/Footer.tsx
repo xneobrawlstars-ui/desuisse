@@ -115,7 +115,7 @@ export default function Footer() {
           <img
             src="/images/desuisse-logo-white.png"
             alt="DeSuisse Luxury Jewellery"
-            style={{ height: 200, width: 'auto', display: 'block', opacity: 0.7 }}
+            style={{ height: 70, width: 'auto', display: 'block', opacity: 0.7 }}
           />
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#555', letterSpacing: '0.08em' }}>
             © {t.footer.copyright}
