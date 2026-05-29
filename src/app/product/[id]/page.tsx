@@ -321,6 +321,18 @@ export default function ProductPage() {
     });
   }, [id]);
 
+  // When a product only offers ONE option for material / stone / stoneSize / size,
+  // auto-select it. The UI hides the picker entirely in that case (a single-option
+  // picker looks unprofessional), so we still need the value selected internally
+  // for the cart and for variant-based pricing to work.
+  useEffect(() => {
+    if (!product) return;
+    if (product.materialVariants?.length === 1) setSelectedVariant(product.materialVariants[0].name);
+    if (product.stones?.length === 1)           setSelectedStone(product.stones[0]);
+    if (product.stoneSizes?.length === 1)       setSelectedStoneSize(product.stoneSizes[0]);
+    if (product.sizes?.length === 1)            setSelectedSize(product.sizes[0]);
+  }, [product]);
+
   if (!product) return (
     <>
       <Header />
@@ -433,8 +445,8 @@ export default function ProductPage() {
             <CoupleSection product={product} language={language} onPriceChange={setCouplePrice} />
           ) : (
             <>
-              {/* Material row */}
-              {hasVariants && (
+              {/* Material row — only show selector when there's a real choice */}
+              {hasVariants && product.materialVariants.length > 1 && (
                 <div style={rowStyle}>
                   <span style={rowLabelStyle}>{t.material}</span>
                   <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -446,9 +458,18 @@ export default function ProductPage() {
                   </div>
                 </div>
               )}
+              {/* Single-material: show as static label, not a button */}
+              {hasVariants && product.materialVariants.length === 1 && (
+                <div style={rowStyle}>
+                  <span style={rowLabelStyle}>{t.material}</span>
+                  <div style={{ flex: 1, fontFamily: 'var(--font-sans)', fontSize: 13, color: '#444', padding: '8px 0' }}>
+                    {product.materialVariants[0].name}
+                  </div>
+                </div>
+              )}
 
               {/* Stone type row */}
-              {product.stones && product.stones.length > 0 && (
+              {product.stones && product.stones.length > 1 && (
                 <div style={rowStyle}>
                   <span style={rowLabelStyle}>{t.stone}</span>
                   <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -458,9 +479,17 @@ export default function ProductPage() {
                   </div>
                 </div>
               )}
+              {product.stones && product.stones.length === 1 && (
+                <div style={rowStyle}>
+                  <span style={rowLabelStyle}>{t.stone}</span>
+                  <div style={{ flex: 1, fontFamily: 'var(--font-sans)', fontSize: 13, color: '#444', padding: '8px 0' }}>
+                    {product.stones[0]}
+                  </div>
+                </div>
+              )}
 
               {/* Stone size row */}
-              {product.stoneSizes && product.stoneSizes.length > 0 && (
+              {product.stoneSizes && product.stoneSizes.length > 1 && (
                 <div style={rowStyle}>
                   <span style={rowLabelStyle}>{t.stoneSize}</span>
                   <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -470,9 +499,17 @@ export default function ProductPage() {
                   </div>
                 </div>
               )}
+              {product.stoneSizes && product.stoneSizes.length === 1 && (
+                <div style={rowStyle}>
+                  <span style={rowLabelStyle}>{t.stoneSize}</span>
+                  <div style={{ flex: 1, fontFamily: 'var(--font-sans)', fontSize: 13, color: '#444', padding: '8px 0' }}>
+                    {product.stoneSizes[0]}
+                  </div>
+                </div>
+              )}
 
               {/* Size row */}
-              {product.sizes.length > 0 && (
+              {product.sizes.length > 1 && (
                 <div style={rowStyle}>
                   <span style={rowLabelStyle}>{t.size}</span>
                   <div style={{ flex: 1 }}>
@@ -482,6 +519,14 @@ export default function ProductPage() {
                       ))}
                     </div>
                     <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#aaa' }}>{t.sizeAdjust}</p>
+                  </div>
+                </div>
+              )}
+              {product.sizes.length === 1 && (
+                <div style={rowStyle}>
+                  <span style={rowLabelStyle}>{t.size}</span>
+                  <div style={{ flex: 1, fontFamily: 'var(--font-sans)', fontSize: 13, color: '#444', padding: '8px 0' }}>
+                    {product.sizes[0]}
                   </div>
                 </div>
               )}

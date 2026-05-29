@@ -15,8 +15,12 @@ export default function QuickView({ product, onClose }: { product: Product; onCl
   const { addToCart } = useCart();
   const wishlisted = isWishlisted(product.id);
   const router = useRouter();
-  const [selectedVariant, setSelectedVariant] = useState('');
-  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedVariant, setSelectedVariant] = useState(() =>
+    product.materialVariants?.length === 1 ? product.materialVariants[0].name : ''
+  );
+  const [selectedSize, setSelectedSize] = useState(() =>
+    product.sizes?.length === 1 ? product.sizes[0] : ''
+  );
   const [qty, setQty] = useState(1);
 
   const hasVariants = product.materialVariants && product.materialVariants.length > 0;
@@ -89,7 +93,7 @@ export default function QuickView({ product, onClose }: { product: Product; onCl
           <div style={{ width: 40, height: 1, background: '#e8e0d4', marginBottom: 22 }} />
 
           {/* Material variants */}
-          {hasVariants && (
+          {hasVariants && product.materialVariants.length > 1 && (
             <div style={{ marginBottom: 20 }}>
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999', marginBottom: 10 }}>
                 {t.material}{selectedVariant ? ': ' : ''}<span style={{ color: '#1a0a0a' }}>{selectedVariant}</span>
@@ -104,9 +108,20 @@ export default function QuickView({ product, onClose }: { product: Product; onCl
               </div>
             </div>
           )}
+          {/* Single-material — render as a static label so it doesn't look like a fake choice */}
+          {hasVariants && product.materialVariants.length === 1 && (
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999', marginBottom: 4 }}>
+                {t.material}
+              </p>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#444' }}>
+                {product.materialVariants[0].name}
+              </p>
+            </div>
+          )}
 
           {/* Sizes */}
-          {product.sizes && product.sizes.length > 0 && (
+          {product.sizes && product.sizes.length > 1 && (
             <div style={{ marginBottom: 22 }}>
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999', marginBottom: 10 }}>
                 {t.size}{selectedSize ? ': ' : ''}<span style={{ color: '#1a0a0a' }}>{selectedSize}</span>
@@ -118,6 +133,16 @@ export default function QuickView({ product, onClose }: { product: Product; onCl
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+          {product.sizes && product.sizes.length === 1 && (
+            <div style={{ marginBottom: 22 }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999', marginBottom: 4 }}>
+                {t.size}
+              </p>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#444' }}>
+                {product.sizes[0]}
+              </p>
             </div>
           )}
 
