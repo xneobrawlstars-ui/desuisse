@@ -4,13 +4,9 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
-import { fetchProducts, saveProductsToDb, saveProducts, Product, DEFAULT_PRODUCTS, MATERIAL_OPTIONS, RING_SIZES, BRACELET_SIZES, NECKLACE_SIZES, CARATS, STONE_OPTIONS, STONE_SIZE_OPTIONS, CATEGORIES, MaterialVariant } from '@/data/products';
+import { fetchProducts, saveProductsToDb, Product, DEFAULT_PRODUCTS, MATERIAL_OPTIONS, RING_SIZES, BRACELET_SIZES, NECKLACE_SIZES, CARATS, STONE_OPTIONS, STONE_SIZE_OPTIONS, CATEGORIES, MaterialVariant } from '@/data/products';
 import { DEFAULT_SITE_IMAGES, SiteImages } from '@/lib/siteImages';
-import {
-  sanitizeText, sanitizeUrl, sanitizeNumber, isValidProduct,
-  isRateLimited, recordAttempt, clearRateLimit, formatLockoutTime,
-  LIMITS,
-} from '@/lib/security';
+import { sanitizeText, sanitizeUrl, sanitizeNumber, isValidProduct, LIMITS } from '@/lib/security';
 
 // Password is now verified SERVER-SIDE via /api/admin-login
 // NEXT_PUBLIC_ADMIN_PASSWORD is no longer used — kept only as fallback for dev
@@ -37,6 +33,7 @@ const EMPTY_PRODUCT: Omit<Product, 'id'> = {
 export default function AdminPage() {
   const { t, language, setLanguage } = useLanguage();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [lockoutInfo, setLockoutInfo] = useState<{ limited: boolean; remainingMs: number; attemptsLeft: number } | null>(null);
@@ -51,60 +48,55 @@ export default function AdminPage() {
   const [siteImages, setSiteImages] = useState<SiteImages>(DEFAULT_SITE_IMAGES);
   const [imagesSaved, setImagesSaved] = useState(false);
 
-  const RATE_KEY = 'admin-login';
-  const SESSION_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
-
+  // ── Check server-side session on mount ──
+  // We probe a protected endpoint with a no-op POST. If it returns 401 we
+  // show the login form; if it returns anything else (200, 503 because no
+  // products, etc.) the session is valid.
   useEffect(() => {
-    const auth = sessionStorage.getItem('ds-admin');
-    const loginTime = sessionStorage.getItem('ds-admin-time');
+    (async () => {
+      try {
+        // GET /api/products is public; instead we use a HEAD-style check via
+        // a tiny session-validation endpoint. Since there isn't one, we
+        // attempt the products POST with the current list (initially empty).
+        // A cleaner approach is a dedicated /api/admin-session endpoint;
+        // for now we just attempt to refresh the page state by hitting the
+        // products GET (which always works) and let the user log in manually.
+        const res = await fetch('/api/admin-session', { credentials: 'same-origin' });
+        if (res.ok) setIsLoggedIn(true);
+      } catch { /* not logged in */ }
+      setAuthChecked(true);
+    })();
 
-    // Check session timeout
-    if (auth === 'true' && loginTime) {
-      const elapsed = Date.now() - parseInt(loginTime, 10);
-      if (elapsed > SESSION_TIMEOUT_MS) {
-        // Session expired
-        sessionStorage.removeItem('ds-admin');
-        sessionStorage.removeItem('ds-admin-time');
-      } else {
-        setIsLoggedIn(true);
-      }
-    }
-
-    // Load products from database (falls back to localStorage)
     fetchProducts().then(products => {
       const validated = products.filter(isValidProduct);
-      setProducts(validated.length > 0 ? validated : []);
+      setProducts(validated);
     });
-    // Load site images
     fetch('/api/site-images').then(r => r.json()).then(data => {
       if (data && typeof data === 'object') setSiteImages({ ...DEFAULT_SITE_IMAGES, ...data });
     }).catch(() => {});
-    setLockoutInfo(isRateLimited(RATE_KEY));
   }, []);
 
-  // Update countdown timer while locked out
+  // Tick the lockout countdown while we're locked
   useEffect(() => {
-    if (!lockoutInfo?.limited) return;
+    if (!lockoutInfo?.limited || lockoutInfo.remainingMs <= 0) return;
     const interval = setInterval(() => {
-      const current = isRateLimited(RATE_KEY);
-      setLockoutInfo(current);
-      if (!current.limited) clearInterval(interval);
+      setLockoutInfo(prev => {
+        if (!prev) return prev;
+        const remaining = prev.remainingMs - 1000;
+        if (remaining <= 0) return { limited: false, remainingMs: 0, attemptsLeft: 5 };
+        return { ...prev, remainingMs: remaining };
+      });
     }, 1000);
     return () => clearInterval(interval);
-  }, [lockoutInfo?.limited]);
+  }, [lockoutInfo?.limited, lockoutInfo?.remainingMs]);
+
+  const formatLockoutTime = (ms: number): string => {
+    const minutes = Math.ceil(ms / 60000);
+    return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Check client-side rate limit first (UX only — real check is on server)
-    const limit = isRateLimited(RATE_KEY);
-    if (limit.limited) {
-      setLockoutInfo(limit);
-      setLoginError(`Too many attempts. Try again in ${formatLockoutTime(limit.remainingMs)}.`);
-      setPassword('');
-      return;
-    }
-
     setLoginError('');
 
     try {
@@ -116,31 +108,29 @@ export default function AdminPage() {
       });
 
       if (res.ok) {
-        // Success — server set an httpOnly cookie
         setIsLoggedIn(true);
-        sessionStorage.setItem('ds-admin', 'true');
-        sessionStorage.setItem('ds-admin-time', Date.now().toString());
         setLoginError('');
-        clearRateLimit(RATE_KEY);
+        setLockoutInfo(null);
       } else if (res.status === 429) {
-        // Server-side rate limit hit
         const data = await res.json().catch(() => ({}));
-        const remainingMs = data.remainingMs ?? LOCKOUT_DURATION_MS;
-        recordAttempt(RATE_KEY);
+        const remainingMs = Number(data.remainingMs) || 15 * 60 * 1000;
         setLockoutInfo({ limited: true, remainingMs, attemptsLeft: 0 });
         setLoginError(`Too many attempts. Please wait ${formatLockoutTime(remainingMs)}.`);
       } else {
-        // Wrong password
-        const state = recordAttempt(RATE_KEY);
-        const newLimit = isRateLimited(RATE_KEY);
-        setLockoutInfo(newLimit);
-        const attemptsLeft = Math.max(0, 5 - state.attempts);
-        if (state.lockedUntil > Date.now()) {
-          setLoginError(`Too many failed attempts. Locked for ${formatLockoutTime(state.lockedUntil - Date.now())}.`);
-        } else if (attemptsLeft > 0) {
-          setLoginError(`Incorrect password. ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining.`);
+        // Wrong password — server returns attemptsLeft
+        const data = await res.json().catch(() => ({}));
+        const attemptsLeft = typeof data.attemptsLeft === 'number' ? data.attemptsLeft : null;
+        if (attemptsLeft !== null) {
+          setLockoutInfo({ limited: false, remainingMs: 0, attemptsLeft });
+          setLoginError(
+            attemptsLeft > 0
+              ? `Incorrect password. ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining.`
+              : 'Too many failed attempts. Please wait 15 minutes.'
+          );
+        } else if (res.status === 500) {
+          setLoginError('Server configuration error. Check that ADMIN_PASSWORD and Upstash env vars are set.');
         } else {
-          setLoginError('Too many failed attempts. Please wait 15 minutes.');
+          setLoginError('Incorrect password.');
         }
       }
     } catch {
@@ -150,14 +140,10 @@ export default function AdminPage() {
     setPassword('');
   };
 
-  const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
-
   const handleLogout = async () => {
     try {
       await fetch('/api/admin-logout', { method: 'POST', credentials: 'same-origin' });
     } catch { /* ignore */ }
-    sessionStorage.removeItem('ds-admin');
-    sessionStorage.removeItem('ds-admin-time');
     setIsLoggedIn(false);
   };
 
@@ -267,14 +253,27 @@ export default function AdminPage() {
       return;
     }
     setProducts(updated);
-    // Save to database (Vercel KV) — falls back to localStorage
-    saveProductsToDb(updated).then(ok => {
-      if (ok) {
+    // Save to Upstash. If the save fails, surface the EXACT reason —
+    // never silently keep the change locally.
+    saveProductsToDb(updated).then(result => {
+      if (result.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 2500);
       } else {
-        alert('⚠️ Failed to save to database. Check that UPSTASH environment variables are set in Vercel and redeploy.');
-        saveProducts(updated); // at least save locally
+        // Revert local state so the admin sees what's really in the DB
+        const message = [
+          '⚠️ Could not save to the database.',
+          result.error ? `Error: ${result.error}` : '',
+          result.hint ? `Hint: ${result.hint}` : '',
+          '',
+          'Common causes:',
+          '  • UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN missing in Vercel env vars',
+          '  • Env vars set only for "Production" but you are on a Preview deployment',
+          '  • Your admin session expired (try logging out and back in)',
+        ].filter(Boolean).join('\n');
+        alert(message);
+        // Re-fetch from the DB so we show what's actually persisted
+        fetchProducts().then(setProducts);
       }
     });
     setIsAdding(false);
@@ -285,8 +284,11 @@ export default function AdminPage() {
     if (!confirm(t.admin.confirmDelete)) return;
     const updated = products.filter(p => p.id !== id);
     setProducts(updated);
-    saveProductsToDb(updated).then(ok => {
-      if (!ok) saveProducts(updated);
+    saveProductsToDb(updated).then(result => {
+      if (!result.ok) {
+        alert(`Could not delete: ${result.error || 'unknown error'}`);
+        fetchProducts().then(setProducts);
+      }
     });
     if (editing?.id === id) setEditing(null);
   };
@@ -294,8 +296,11 @@ export default function AdminPage() {
   const handleReset = () => {
     if (!confirm('Reset all products to defaults?')) return;
     setProducts(DEFAULT_PRODUCTS);
-    saveProductsToDb(DEFAULT_PRODUCTS).then(ok => {
-      if (!ok) saveProducts(DEFAULT_PRODUCTS);
+    saveProductsToDb(DEFAULT_PRODUCTS).then(result => {
+      if (!result.ok) {
+        alert(`Could not reset: ${result.error || 'unknown error'}`);
+        fetchProducts().then(setProducts);
+      }
     });
     setEditing(null);
     setIsAdding(false);
@@ -318,13 +323,14 @@ export default function AdminPage() {
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f3ee' }}>
         <div style={{ background: '#fff', padding: '48px', width: '100%', maxWidth: 420, boxShadow: '0 4px 40px rgba(26,10,10,0.1)' }}>
           <div style={{ textAlign: 'center', marginBottom: 36 }}>
-            <Image src="https://desuisse.com/wp-content/uploads/2023/02/desuisselogo-2.png" alt="DeSuisse" width={140} height={42} style={{ objectFit: 'contain', height: 42, width: 'auto' }} unoptimized />
-            <h1 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.8rem', fontWeight: 400, marginTop: 20, color: '#1a0a0a' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/desuisse-logo.svg" alt="DeSuisse" style={{ height: 42, width: 'auto', display: 'block', margin: '0 auto' }} />
+            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 400, marginTop: 20, color: '#1a0a0a' }}>
               {t.admin.loginTitle}
             </h1>
             {/* Attempts remaining indicator */}
             {lockoutInfo && !isLocked && lockoutInfo.attemptsLeft < 5 && lockoutInfo.attemptsLeft > 0 && (
-              <p style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#e67e22', marginTop: 8 }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#e67e22', marginTop: 8 }}>
                 {lockoutInfo.attemptsLeft} attempt{lockoutInfo.attemptsLeft !== 1 ? 's' : ''} remaining
               </p>
             )}
@@ -336,10 +342,10 @@ export default function AdminPage() {
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
-              <p style={{ fontFamily: 'Montserrat', fontSize: 13, fontWeight: 600, color: '#c0392b', marginBottom: 8 }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: '#c0392b', marginBottom: 8 }}>
                 Account Temporarily Locked
               </p>
-              <p style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#888' }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#888' }}>
                 Too many failed attempts. Try again in{' '}
                 <strong>{formatLockoutTime(lockoutInfo?.remainingMs ?? 0)}</strong>.
               </p>
@@ -358,7 +364,7 @@ export default function AdminPage() {
                 disabled={isLocked}
               />
               {loginError && (
-                <p style={{ color: '#c0392b', fontFamily: 'Montserrat', fontSize: 12 }}>{loginError}</p>
+                <p style={{ color: '#c0392b', fontFamily: 'var(--font-sans)', fontSize: 12 }}>{loginError}</p>
               )}
               <button type="submit" className="btn-dark" style={{ width: '100%', textAlign: 'center' }} disabled={isLocked}>
                 {t.admin.login}
@@ -366,7 +372,7 @@ export default function AdminPage() {
             </form>
           )}
           <div style={{ textAlign: 'center', marginTop: 24 }}>
-            <Link href="/" style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#888' }}>
+            <Link href="/" style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#888' }}>
               ← Back to website
             </Link>
           </div>
@@ -377,18 +383,16 @@ export default function AdminPage() {
 
   // ADMIN DASHBOARD
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'Montserrat' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'var(--font-sans)' }}>
 
       {/* Sidebar */}
       <aside className="admin-sidebar" style={{ padding: '32px 0' }}>
         <div style={{ padding: '0 24px 32px', borderBottom: '1px solid #2a1a1a' }}>
-          <Image
-            src="https://desuisse.com/wp-content/uploads/2023/02/desuisselogo-2.png"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/desuisse-logo-white.svg"
             alt="DeSuisse"
-            width={130}
-            height={38}
-            style={{ filter: 'brightness(0) invert(1)', objectFit: 'contain', height: 38, width: 'auto' }}
-            unoptimized
+            style={{ height: 36, width: 'auto', display: 'block' }}
           />
           <p style={{ fontSize: 10, color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 8 }}>
             Admin Panel
@@ -433,7 +437,7 @@ export default function AdminPage() {
               <button key={tab} onClick={() => setActiveTab(tab)} style={{
                 padding: '18px 24px', background: 'none', border: 'none',
                 borderBottom: `2px solid ${activeTab === tab ? '#c9a84c' : 'transparent'}`,
-                fontFamily: 'Montserrat', fontSize: 12, fontWeight: activeTab === tab ? 700 : 500,
+                fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: activeTab === tab ? 700 : 500,
                 color: activeTab === tab ? '#1a0a0a' : '#888', cursor: 'pointer',
                 letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.2s',
               }}>
@@ -443,14 +447,14 @@ export default function AdminPage() {
           </div>
           {activeTab === 'products' && (
             <div style={{ display: 'flex', gap: 12, padding: '8px 0' }}>
-              {saved && <span style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#27ae60', display: 'flex', alignItems: 'center', gap: 6 }}>✓ Saved!</span>}
+              {saved && <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#27ae60', display: 'flex', alignItems: 'center', gap: 6 }}>✓ Saved!</span>}
               <button onClick={handleReset} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #e8e0d4', color: '#999', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>Reset</button>
               <button onClick={startAdd} className="btn-dark" style={{ padding: '10px 24px', fontSize: 10 }}>+ {t.admin.addProduct}</button>
             </div>
           )}
           {activeTab === 'images' && (
             <div style={{ padding: '8px 0' }}>
-              {imagesSaved && <span style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#27ae60', marginRight: 12 }}>✓ Saved!</span>}
+              {imagesSaved && <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#27ae60', marginRight: 12 }}>✓ Saved!</span>}
             </div>
           )}
         </div>
@@ -458,7 +462,7 @@ export default function AdminPage() {
         {/* ── SITE IMAGES TAB ── */}
         {activeTab === 'images' && (
           <div style={{ padding: '32px', maxWidth: 900 }}>
-            <p style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#888', marginBottom: 28, lineHeight: 1.7 }}>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#888', marginBottom: 28, lineHeight: 1.7 }}>
               {language === 'sq'
                 ? 'Ndryshoni URL-të e fotove për seksionet kryesore të faqes. Mund të përdorni URL-e HTTPS ose rrugë lokale si /images/foto.jpg (nëse e keni shtuar foton në public/images/).'
                 : 'Update image URLs for each homepage section. Use HTTPS URLs or local paths like /images/photo.jpg (if you\'ve added the photo to public/images/).'}
@@ -466,7 +470,7 @@ export default function AdminPage() {
 
             {/* Helper note about image formats */}
             <div style={{ background: '#f7f3ee', border: '1px solid #e8e0d4', padding: '14px 18px', marginBottom: 28, borderLeft: '3px solid #c9a84c' }}>
-              <p style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#666', lineHeight: 1.8 }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#666', lineHeight: 1.8 }}>
                 <strong>💡 Tip:</strong> For best results on all devices (iOS, Android, desktop), upload your photos to <strong>public/images/</strong> in your project and use paths like <strong>/images/myPhoto.jpg</strong>. Avoid hotlinking from other websites — they may block the request on mobile.
               </p>
             </div>
@@ -483,10 +487,10 @@ export default function AdminPage() {
               { key: 'collectionParker',  label: 'Featured Collection: Right (e.g. Parker)',     note: 'Recommended: landscape, min 800×500' },
             ].map(field => (
               <div key={field.key} style={{ marginBottom: 24 }}>
-                <label style={{ fontFamily: 'Montserrat', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1a0a0a', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1a0a0a', display: 'block', marginBottom: 4 }}>
                   {field.label}
                 </label>
-                <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#bbb', marginBottom: 8 }}>{field.note}</p>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#bbb', marginBottom: 8 }}>{field.note}</p>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <input
                     type="text"
@@ -636,7 +640,7 @@ export default function AdminPage() {
           {/* Edit / Add Form */}
           {(editing || isAdding) && (
             <div style={{ background: '#fff', border: '1px solid #e8e0d4', padding: '28px', position: 'sticky', top: 20, maxHeight: '90vh', overflowY: 'auto' }}>
-              <h3 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.4rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 24 }}>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 24 }}>
                 {isAdding ? t.admin.addProduct : t.admin.editProduct}
               </h3>
 
@@ -680,14 +684,14 @@ export default function AdminPage() {
                   <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>
                     {language === 'sq' ? 'Materialet & Çmimet' : 'Materials & Prices'}
                   </label>
-                  <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#bbb', marginBottom: 12, lineHeight: 1.6 }}>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#bbb', marginBottom: 12, lineHeight: 1.6 }}>
                     {language === 'sq'
                       ? 'Zgjidhni materialin, pastaj karatazhin dhe vendosni çmimin.'
                       : 'Select the material, then the carat, and set a price for each.'}
                   </p>
 
                   {/* Step 1: pick materials */}
-                  <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#888', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#888', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
                     1. {language === 'sq' ? 'Zgjidhni Materialet' : 'Select Materials'}
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
@@ -714,13 +718,13 @@ export default function AdminPage() {
                   {/* Step 2: for each selected material, pick carats and set prices */}
                   {MATERIAL_OPTIONS.filter(mat => (form.materialVariants || []).some(v => v.name.startsWith(mat))).length > 0 && (
                     <div>
-                      <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#888', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                      <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#888', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
                         2. {language === 'sq' ? 'Zgjidhni Karatazhin & Çmimin' : 'Select Carat & Price'}
                       </p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {MATERIAL_OPTIONS.filter(mat => (form.materialVariants || []).some(v => v.name.startsWith(mat))).map(mat => (
                           <div key={mat} style={{ background: '#f7f3ee', padding: '12px 14px', border: '1px solid #e8e0d4' }}>
-                            <p style={{ fontFamily: 'Montserrat', fontSize: 11, fontWeight: 600, color: '#1a0a0a', marginBottom: 10 }}>{mat}</p>
+                            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: '#1a0a0a', marginBottom: 10 }}>{mat}</p>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                               {CARATS.map(ct => {
                                 const variantName = `${mat} ${ct}`;
@@ -736,7 +740,7 @@ export default function AdminPage() {
                                         setForm({ ...form, materialVariants: current.filter(v => v.name !== variantName) });
                                       }
                                     }} style={{ width: 14, height: 14, accentColor: '#c9a84c', cursor: 'pointer', flexShrink: 0 }} />
-                                    <span style={{ fontFamily: 'Montserrat', fontSize: 11, color: isActive ? '#1a0a0a' : '#aaa', minWidth: 40, fontWeight: isActive ? 600 : 400 }}>{ct}</span>
+                                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: isActive ? '#1a0a0a' : '#aaa', minWidth: 40, fontWeight: isActive ? 600 : 400 }}>{ct}</span>
                                     {isActive && (
                                       <>
                                         <input type="number" value={existing?.price || ''} min="0"
@@ -744,10 +748,10 @@ export default function AdminPage() {
                                             const updated = (form.materialVariants || []).map(v => v.name === variantName ? { ...v, price: Number(e.target.value) } : v);
                                             setForm({ ...form, materialVariants: updated });
                                           }}
-                                          style={{ width: 90, padding: '5px 8px', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 11, outline: 'none' }}
+                                          style={{ width: 90, padding: '5px 8px', border: '1px solid #e8e0d4', fontFamily: 'var(--font-sans)', fontSize: 11, outline: 'none' }}
                                           placeholder="0"
                                         />
-                                        <span style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#999' }}>€</span>
+                                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#999' }}>€</span>
                                       </>
                                     )}
                                   </div>
@@ -762,7 +766,7 @@ export default function AdminPage() {
 
                   {/* Summary */}
                   {(form.materialVariants || []).length > 0 && (
-                    <div style={{ marginTop: 10, padding: '8px 12px', background: '#f7f3ee', fontSize: 10, fontFamily: 'Montserrat', color: '#666', lineHeight: 1.8 }}>
+                    <div style={{ marginTop: 10, padding: '8px 12px', background: '#f7f3ee', fontSize: 10, fontFamily: 'var(--font-sans)', color: '#666', lineHeight: 1.8 }}>
                       {(form.materialVariants || []).map(v => `${v.name}: ${v.price}€`).join(' · ')}
                     </div>
                   )}
@@ -816,7 +820,7 @@ export default function AdminPage() {
                     <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>
                       {language === 'sq' ? 'Madhësitë e Gurit' : 'Stone Sizes'}
                     </label>
-                    <p style={{ fontFamily: 'Montserrat', fontSize: 10, color: '#bbb', marginBottom: 8 }}>
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#bbb', marginBottom: 8 }}>
                       {language === 'sq' ? 'Shkruani madhësitë e ndara me presje, p.sh. 0.30ct, 0.50ct, 1.00ct' : 'Enter sizes separated by commas, e.g. 0.30ct, 0.50ct, 1.00ct'}
                     </p>
                     <input
@@ -832,7 +836,7 @@ export default function AdminPage() {
                     {(form.stoneSizes || []).length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
                         {(form.stoneSizes || []).map(s => (
-                          <span key={s} style={{ padding: '3px 10px', background: '#1a0a0a', color: '#fff', fontFamily: 'Montserrat', fontSize: 10, fontWeight: 600 }}>{s}</span>
+                          <span key={s} style={{ padding: '3px 10px', background: '#1a0a0a', color: '#fff', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600 }}>{s}</span>
                         ))}
                       </div>
                     )}
@@ -843,13 +847,13 @@ export default function AdminPage() {
                 <div style={{ background: '#f7f3ee', padding: '14px 16px', border: '1px solid #e8e0d4', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                     <input type="checkbox" checked={form.hasCoupleOption || false} onChange={e => setForm({ ...form, hasCoupleOption: e.target.checked })} style={{ width: 14, height: 14, accentColor: '#c9a84c', cursor: 'pointer' }} />
-                    <span style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#444', fontWeight: 500 }}>
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#444', fontWeight: 500 }}>
                       {language === 'sq' ? 'Opsion çift (Unaza e Burrit & Gruas)' : 'Couple option (Men\'s & Women\'s ring)'}
                     </span>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                     <input type="checkbox" checked={form.hasEngraving || false} onChange={e => setForm({ ...form, hasEngraving: e.target.checked })} style={{ width: 14, height: 14, accentColor: '#c9a84c', cursor: 'pointer' }} />
-                    <span style={{ fontFamily: 'Montserrat', fontSize: 11, color: '#444', fontWeight: 500 }}>
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#444', fontWeight: 500 }}>
                       {language === 'sq' ? 'Mundëso gravim falas' : 'Enable free engraving'}
                     </span>
                   </label>
