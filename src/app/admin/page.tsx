@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { fetchProducts, saveProductsToDb, Product, DEFAULT_PRODUCTS, MATERIAL_OPTIONS, RING_SIZES, BRACELET_SIZES, NECKLACE_SIZES, CARATS, STONE_OPTIONS, STONE_SIZE_OPTIONS, CATEGORIES, MaterialVariant } from '@/data/products';
 import { DEFAULT_SITE_IMAGES, SiteImages } from '@/lib/siteImages';
 import { sanitizeText, sanitizeUrl, sanitizeNumber, isValidProduct, LIMITS } from '@/lib/security';
+import CloudinaryUploader from '@/components/CloudinaryUploader';
 
 // Password is now verified SERVER-SIDE via /api/admin-login
 // NEXT_PUBLIC_ADMIN_PASSWORD is no longer used — kept only as fallback for dev
@@ -486,31 +487,29 @@ export default function AdminPage() {
               { key: 'collectionClassic', label: 'Featured Collection: Left (e.g. The Classics)', note: 'Recommended: landscape, min 800×500' },
               { key: 'collectionParker',  label: 'Featured Collection: Right (e.g. Parker)',     note: 'Recommended: landscape, min 800×500' },
             ].map(field => (
-              <div key={field.key} style={{ marginBottom: 24 }}>
+              <div key={field.key} style={{ marginBottom: 28 }}>
                 <label style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1a0a0a', display: 'block', marginBottom: 4 }}>
                   {field.label}
                 </label>
-                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#bbb', marginBottom: 8 }}>{field.note}</p>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#bbb', marginBottom: 10 }}>{field.note}</p>
+                <CloudinaryUploader
+                  currentUrl={siteImages[field.key as keyof SiteImages] || ''}
+                  onUploaded={(url) => setSiteImages(prev => ({ ...prev, [field.key]: url }))}
+                  language={language}
+                />
+                <details style={{ marginTop: 8 }}>
+                  <summary style={{ cursor: 'pointer', fontSize: 11, color: '#888', fontFamily: 'var(--font-sans)', userSelect: 'none' }}>
+                    {language === 'sq' ? 'ose ngjit URL manualisht' : 'or paste a URL manually'}
+                  </summary>
                   <input
                     type="text"
                     className="ds-input"
-                    style={{ flex: 1 }}
+                    style={{ marginTop: 6 }}
                     value={siteImages[field.key as keyof SiteImages] || ''}
                     onChange={e => setSiteImages(prev => ({ ...prev, [field.key]: e.target.value }))}
                     placeholder="/images/photo.jpg or https://..."
                   />
-                  {/* Preview thumbnail */}
-                  {siteImages[field.key as keyof SiteImages] && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={siteImages[field.key as keyof SiteImages]}
-                      alt="preview"
-                      style={{ width: 64, height: 64, objectFit: 'cover', flexShrink: 0, border: '1px solid #e8e0d4', background: '#f7f3ee' }}
-                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  )}
-                </div>
+                </details>
               </div>
             ))}
 
@@ -881,19 +880,52 @@ export default function AdminPage() {
                   />
                 </div>
 
-                {/* Images */}
+                {/* Images — colleague-friendly upload UI */}
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>{t.admin.image} * (Main)</label>
-                  <input type="url" className="ds-input" value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} placeholder="https://..." />
-                  {form.image && (
-                    <div style={{ marginTop: 8, width: 72, height: 72, overflow: 'hidden', background: '#f7f3ee' }}>
-                      <Image src={form.image} alt="Preview" width={72} height={72} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
-                    </div>
-                  )}
+                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 8 }}>{t.admin.image} * (Main)</label>
+                  <CloudinaryUploader
+                    currentUrl={form.image}
+                    onUploaded={(url) => setForm({ ...form, image: url })}
+                    language={language}
+                  />
+                  {/* Optional manual URL paste — collapsed by default */}
+                  <details style={{ marginTop: 8 }}>
+                    <summary style={{ cursor: 'pointer', fontSize: 11, color: '#888', fontFamily: 'var(--font-sans)', userSelect: 'none' }}>
+                      {language === 'sq' ? 'ose ngjit URL manualisht' : 'or paste a URL manually'}
+                    </summary>
+                    <input
+                      type="url"
+                      className="ds-input"
+                      value={form.image}
+                      onChange={e => setForm({ ...form, image: e.target.value })}
+                      placeholder="https://..."
+                      style={{ marginTop: 6 }}
+                    />
+                  </details>
                 </div>
+
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 6 }}>{t.admin.image} (Hover)</label>
-                  <input type="url" className="ds-input" value={form.image2 || ''} onChange={e => setForm({ ...form, image2: e.target.value })} placeholder="https://..." />
+                  <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#999', display: 'block', marginBottom: 8 }}>
+                    {t.admin.image} (Hover) — {language === 'sq' ? 'opsionale' : 'optional'}
+                  </label>
+                  <CloudinaryUploader
+                    currentUrl={form.image2 || ''}
+                    onUploaded={(url) => setForm({ ...form, image2: url })}
+                    language={language}
+                  />
+                  <details style={{ marginTop: 8 }}>
+                    <summary style={{ cursor: 'pointer', fontSize: 11, color: '#888', fontFamily: 'var(--font-sans)', userSelect: 'none' }}>
+                      {language === 'sq' ? 'ose ngjit URL manualisht' : 'or paste a URL manually'}
+                    </summary>
+                    <input
+                      type="url"
+                      className="ds-input"
+                      value={form.image2 || ''}
+                      onChange={e => setForm({ ...form, image2: e.target.value })}
+                      placeholder="https://..."
+                      style={{ marginTop: 6 }}
+                    />
+                  </details>
                 </div>
 
                 {/* Featured */}
