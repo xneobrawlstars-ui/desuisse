@@ -506,7 +506,34 @@ export default function ProductPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               {t.schedule}
             </button>
-            <button onClick={() => addToCart(product, 1, selectedVariant, selectedSize, product.hasCoupleOption ? couplePrice : (currentVariant?.price || product.price))} style={{ padding: '15px', background: '#1a0a0a', color: '#fff', border: 'none', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', transition: 'background 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            <button onClick={() => {
+              // Require material when product has variants
+              if (hasVariants && !selectedVariant) {
+                alert(language === 'sq' ? 'Ju lutemi zgjidhni materialin.' : 'Please select a material.');
+                return;
+              }
+              // Require size when product offers sizes
+              if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+                alert(language === 'sq' ? 'Ju lutemi zgjidhni madhësinë.' : 'Please select a size.');
+                return;
+              }
+              // Resolve a sensible unit price
+              let unitPrice = 0;
+              if (product.hasCoupleOption && couplePrice > 0) {
+                unitPrice = couplePrice;
+              } else if (currentVariant) {
+                unitPrice = currentVariant.price;
+              } else if (product.price > 0) {
+                unitPrice = product.price;
+              } else if (hasVariants && product.materialVariants.length > 0) {
+                unitPrice = product.materialVariants[0].price;
+              }
+              if (unitPrice <= 0) {
+                alert(language === 'sq' ? 'Çmimi nuk është i disponueshëm.' : 'Price not available — please contact us.');
+                return;
+              }
+              addToCart(product, 1, selectedVariant, selectedSize, unitPrice);
+            }} style={{ padding: '15px', background: '#1a0a0a', color: '#fff', border: 'none', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', transition: 'background 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#c9a84c'}
               onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = '#1a0a0a'}
             >

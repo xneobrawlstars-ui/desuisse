@@ -2,15 +2,18 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useCart } from '@/lib/CartContext';
 import { sanitizeText, sanitizeEmail, sanitizePhone, isValidCardNumber, isValidExpiry, isValidCVV, LIMITS } from '@/lib/security';
 
 type Step = 'info' | 'shipping' | 'payment' | 'confirm';
 
 export default function CheckoutPage() {
   const { language } = useLanguage();
+  const { items, total: cartTotal, clearCart } = useCart();
   const [step, setStep] = useState<Step>('info');
   const [submitted, setSubmitted] = useState(false);
   const [stepError, setStepError] = useState('');
@@ -74,11 +77,11 @@ export default function CheckoutPage() {
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '12px 16px', border: '1px solid #e8e0d4',
-    fontFamily: 'Montserrat', fontSize: 13, outline: 'none',
+    fontFamily: 'var(--font-sans)', fontSize: 13, outline: 'none',
     transition: 'border-color 0.2s', background: '#fff',
   };
   const labelStyle: React.CSSProperties = {
-    fontFamily: 'Montserrat', fontSize: 10, fontWeight: 600,
+    fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600,
     letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999',
     display: 'block', marginBottom: 6,
   };
@@ -100,8 +103,8 @@ export default function CheckoutPage() {
               <path d="M20 6 9 17l-5-5" />
             </svg>
           </div>
-          <h1 style={{ fontFamily: 'Cormorant Garamond', fontSize: '2.5rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 16 }}>{t.thankYou}</h1>
-          <p style={{ fontFamily: 'Montserrat', fontSize: 13, color: '#888', marginBottom: 36, lineHeight: 1.8 }}>{t.thankYouSub}</p>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.5rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 16 }}>{t.thankYou}</h1>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#888', marginBottom: 36, lineHeight: 1.8 }}>{t.thankYouSub}</p>
           <Link href="/shop" className="btn-dark">{t.continueShopping}</Link>
         </div>
         <Footer />
@@ -130,10 +133,10 @@ export default function CheckoutPage() {
                   {i < currentIdx ? (
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a0a0a" strokeWidth="2.5"><path d="M20 6 9 17l-5-5" /></svg>
                   ) : (
-                    <span style={{ fontFamily: 'Montserrat', fontSize: 11, fontWeight: 700, color: i === currentIdx ? '#fff' : '#999' }}>{i + 1}</span>
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, color: i === currentIdx ? '#fff' : '#999' }}>{i + 1}</span>
                   )}
                 </div>
-                <span style={{ fontFamily: 'Montserrat', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: i === currentIdx ? '#1a0a0a' : i < currentIdx ? '#c9a84c' : '#bbb' }}>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: i === currentIdx ? '#1a0a0a' : i < currentIdx ? '#c9a84c' : '#bbb' }}>
                   {t.steps[s]}
                 </span>
               </div>
@@ -151,7 +154,7 @@ export default function CheckoutPage() {
           {/* STEP 1: Personal Info */}
           {step === 'info' && (
             <div>
-              <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.8rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 28 }}>{t.steps.info}</h2>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 28 }}>{t.steps.info}</h2>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <div>
                   <label style={labelStyle}>{t.firstName} *</label>
@@ -182,14 +185,14 @@ export default function CheckoutPage() {
               }} style={{ minWidth: 180, textAlign: 'center' }}>
                 {t.next} →
               </button>
-              {stepError && <p style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#c0392b', marginTop: 12 }}>{stepError}</p>}
+              {stepError && <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#c0392b', marginTop: 12 }}>{stepError}</p>}
             </div>
           )}
 
           {/* STEP 2: Shipping */}
           {step === 'shipping' && (
             <div>
-              <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.8rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 28 }}>{t.steps.shipping}</h2>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 28 }}>{t.steps.shipping}</h2>
               <div style={{ marginBottom: 16 }}>
                 <label style={labelStyle}>{t.address} *</label>
                 <input style={inputStyle} value={shipping.address} onChange={e => setShipping({ ...shipping, address: e.target.value })} onFocus={onFocus} onBlur={onBlur} placeholder="Eliot Engjell, 55" required />
@@ -217,13 +220,13 @@ export default function CheckoutPage() {
                   {(['standard', 'express'] as const).map(m => (
                     <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', border: `1px solid ${shipping.method === m ? '#c9a84c' : '#e8e0d4'}`, cursor: 'pointer', transition: 'border-color 0.2s', background: shipping.method === m ? '#fdf9f0' : '#fff' }}>
                       <input type="radio" name="shippingMethod" value={m} checked={shipping.method === m} onChange={() => setShipping({ ...shipping, method: m })} style={{ accentColor: '#c9a84c' }} />
-                      <span style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#444' }}>{m === 'standard' ? t.standard : t.express}</span>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#444' }}>{m === 'standard' ? t.standard : t.express}</span>
                     </label>
                   ))}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
-                <button onClick={() => setStep('info')} style={{ padding: '14px 28px', background: 'transparent', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 11, fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer', color: '#888' }}>← {t.back}</button>
+                <button onClick={() => setStep('info')} style={{ padding: '14px 28px', background: 'transparent', border: '1px solid #e8e0d4', fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer', color: '#888' }}>← {t.back}</button>
                 <button className="btn-dark" onClick={() => {
                   setStepError('');
                   const cleanAddr = sanitizeText(shipping.address, LIMITS.ADDRESS);
@@ -237,21 +240,21 @@ export default function CheckoutPage() {
                   setStep('payment');
                 }} style={{ minWidth: 180, textAlign: 'center' }}>{t.next} →</button>
               </div>
-              {stepError && <p style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#c0392b', marginTop: 12 }}>{stepError}</p>}
+              {stepError && <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#c0392b', marginTop: 12 }}>{stepError}</p>}
             </div>
           )}
 
           {/* STEP 3: Payment */}
           {step === 'payment' && (
             <div>
-              <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.8rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 28 }}>{t.steps.payment}</h2>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 28 }}>{t.steps.payment}</h2>
               <div style={{ marginBottom: 24 }}>
                 <label style={labelStyle}>{t.paymentMethod}</label>
                 <div style={{ display: 'flex', gap: 12 }}>
                   {(['card', 'transfer'] as const).map(m => (
                     <label key={m} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', border: `1px solid ${payment.method === m ? '#c9a84c' : '#e8e0d4'}`, cursor: 'pointer', transition: 'border-color 0.2s', background: payment.method === m ? '#fdf9f0' : '#fff' }}>
                       <input type="radio" name="paymentMethod" value={m} checked={payment.method === m} onChange={() => setPayment({ ...payment, method: m })} style={{ accentColor: '#c9a84c' }} />
-                      <span style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#444' }}>{m === 'card' ? t.card : t.transfer}</span>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#444' }}>{m === 'card' ? t.card : t.transfer}</span>
                     </label>
                   ))}
                 </div>
@@ -282,7 +285,7 @@ export default function CheckoutPage() {
 
               {payment.method === 'transfer' && (
                 <div style={{ background: '#f7f3ee', padding: '20px', border: '1px solid #e8e0d4', marginBottom: 32 }}>
-                  <p style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#666', lineHeight: 1.9 }}>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#666', lineHeight: 1.9 }}>
                     {language === 'sq' ? 'Llogaria bankare' : 'Bank Account'}: <strong>DeSuisse SH.P.K.</strong><br />
                     IBAN: <strong>XK05 1212 0123 4567 8901 2</strong><br />
                     BIC: <strong>RBKOXKPR</strong><br />
@@ -292,7 +295,7 @@ export default function CheckoutPage() {
               )}
 
               <div style={{ display: 'flex', gap: 12 }}>
-                <button onClick={() => setStep('shipping')} style={{ padding: '14px 28px', background: 'transparent', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 11, fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer', color: '#888' }}>← {t.back}</button>
+                <button onClick={() => setStep('shipping')} style={{ padding: '14px 28px', background: 'transparent', border: '1px solid #e8e0d4', fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer', color: '#888' }}>← {t.back}</button>
                 <button className="btn-dark" onClick={() => {
                   setStepError('');
                   if (payment.method === 'card') {
@@ -303,14 +306,14 @@ export default function CheckoutPage() {
                   setStep('confirm');
                 }} style={{ minWidth: 180, textAlign: 'center' }}>{t.next} →</button>
               </div>
-              {stepError && <p style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#c0392b', marginTop: 12 }}>{stepError}</p>}
+              {stepError && <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#c0392b', marginTop: 12 }}>{stepError}</p>}
             </div>
           )}
 
           {/* STEP 4: Confirm */}
           {step === 'confirm' && (
             <div>
-              <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.8rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 28 }}>{t.reviewTitle}</h2>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 28 }}>{t.reviewTitle}</h2>
               {[
                 { label: t.infoLabel, lines: [`${info.firstName} ${info.lastName}`, info.email, info.phone].filter(Boolean), editStep: 'info' as Step },
                 { label: t.shippingLabel, lines: [shipping.address, `${shipping.city} ${shipping.zip}`, shipping.country, shipping.method === 'express' ? (language === 'sq' ? 'Express' : 'Express') : (language === 'sq' ? 'Standard' : 'Standard')].filter(Boolean), editStep: 'shipping' as Step },
@@ -318,14 +321,14 @@ export default function CheckoutPage() {
               ].map(section => (
                 <div key={section.label} style={{ border: '1px solid #e8e0d4', padding: '20px 24px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    <p style={{ fontFamily: 'Montserrat', fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#bbb', marginBottom: 8 }}>{section.label}</p>
-                    {section.lines.map((l, i) => <p key={i} style={{ fontFamily: 'Montserrat', fontSize: 13, color: '#444', marginBottom: 3 }}>{l}</p>)}
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#bbb', marginBottom: 8 }}>{section.label}</p>
+                    {section.lines.map((l, i) => <p key={i} style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#444', marginBottom: 3 }}>{l}</p>)}
                   </div>
-                  <button onClick={() => setStep(section.editStep)} style={{ background: 'none', border: 'none', fontFamily: 'Montserrat', fontSize: 11, color: '#c9a84c', cursor: 'pointer', letterSpacing: '0.05em', textDecoration: 'underline', flexShrink: 0 }}>{t.edit}</button>
+                  <button onClick={() => setStep(section.editStep)} style={{ background: 'none', border: 'none', fontFamily: 'var(--font-sans)', fontSize: 11, color: '#c9a84c', cursor: 'pointer', letterSpacing: '0.05em', textDecoration: 'underline', flexShrink: 0 }}>{t.edit}</button>
                 </div>
               ))}
               <div style={{ display: 'flex', gap: 12, marginTop: 28 }}>
-                <button onClick={() => setStep('payment')} style={{ padding: '14px 28px', background: 'transparent', border: '1px solid #e8e0d4', fontFamily: 'Montserrat', fontSize: 11, fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer', color: '#888' }}>← {t.back}</button>
+                <button onClick={() => setStep('payment')} style={{ padding: '14px 28px', background: 'transparent', border: '1px solid #e8e0d4', fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer', color: '#888' }}>← {t.back}</button>
                 <button className="btn-dark" disabled={isSubmitting} onClick={async () => {
                   setIsSubmitting(true);
                   setStepError('');
@@ -350,6 +353,7 @@ export default function CheckoutPage() {
                     });
                     if (res.status === 429) { setStepError('Too many requests. Please wait a moment.'); return; }
                     if (!res.ok) { setStepError('Something went wrong. Please try again.'); return; }
+                    clearCart();
                     setSubmitted(true);
                   } catch { setStepError('Connection error. Please check your internet.'); }
                   finally { setIsSubmitting(false); }
@@ -357,27 +361,67 @@ export default function CheckoutPage() {
                   {isSubmitting ? '...' : `✓ ${t.place}`}
                 </button>
               </div>
-              {stepError && <p style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#c0392b', marginTop: 12 }}>{stepError}</p>}
+              {stepError && <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#c0392b', marginTop: 12 }}>{stepError}</p>}
             </div>
           )}
         </div>
 
-        {/* Order summary sidebar */}
-        <div style={{ background: '#f7f3ee', border: '1px solid #e8e0d4', padding: '28px', position: 'sticky', top: 24 }}>
-          <h3 style={{ fontFamily: 'Cormorant Garamond', fontSize: '1.3rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #e8e0d4' }}>{t.orderSummary}</h3>
-          <p style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#999', textAlign: 'center', padding: '16px 0' }}>{t.emptyCart}</p>
-          <Link href="/shop" style={{ display: 'block', textAlign: 'center', fontFamily: 'Montserrat', fontSize: 11, color: '#c9a84c', letterSpacing: '0.08em', marginTop: 8, textDecoration: 'underline' }}>{t.browseCta}</Link>
+        {/* Order summary sidebar — reads from the actual cart */}
+        <div style={{ background: '#f7f3ee', border: '1px solid #e8e0d4', padding: '28px', position: 'sticky', top: 24, alignSelf: 'start' }}>
+          <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.3rem', fontWeight: 400, color: '#1a0a0a', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #e8e0d4' }}>{t.orderSummary}</h3>
+
+          {items.length === 0 ? (
+            <>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#999', textAlign: 'center', padding: '16px 0' }}>{t.emptyCart}</p>
+              <Link href="/shop" style={{ display: 'block', textAlign: 'center', fontFamily: 'var(--font-sans)', fontSize: 11, color: '#c9a84c', letterSpacing: '0.08em', marginTop: 8, textDecoration: 'underline' }}>{t.browseCta}</Link>
+            </>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 8 }}>
+              {items.map((it, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', paddingBottom: 12, borderBottom: '1px solid #ece4d6' }}>
+                  <div style={{ width: 56, height: 56, position: 'relative', background: '#fff', flexShrink: 0, border: '1px solid #ece4d6' }}>
+                    {it.product.image && (
+                      <Image src={it.product.image} alt={it.product.name} fill style={{ objectFit: 'contain', padding: 4 }} unoptimized />
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1a0a0a', fontWeight: 600, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {it.product.name}
+                    </p>
+                    {(it.selectedMaterial || it.selectedSize) && (
+                      <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#888', marginBottom: 3, letterSpacing: '0.04em' }}>
+                        {[it.selectedMaterial, it.selectedSize].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#666' }}>
+                      {it.qty} × {it.unitPrice.toLocaleString('de-DE')}.00€
+                    </p>
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1a0a0a', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    {(it.unitPrice * it.qty).toLocaleString('de-DE')}.00€
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div style={{ borderTop: '1px solid #e8e0d4', marginTop: 20, paddingTop: 16 }}>
-            {[
-              { label: t.subtotal, value: '0.00€' },
-              { label: t.shippingCost, value: shipping.method === 'express' ? '9.99€' : t.free },
-              { label: t.total, value: shipping.method === 'express' ? '9.99€' : '0.00€', bold: true },
-            ].map(row => (
-              <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontFamily: 'Montserrat', fontSize: 12, color: '#888', fontWeight: row.bold ? 600 : 400 }}>{row.label}</span>
-                <span style={{ fontFamily: 'Montserrat', fontSize: 12, color: row.bold ? '#1a0a0a' : '#666', fontWeight: row.bold ? 600 : 400 }}>{row.value}</span>
-              </div>
-            ))}
+            {(() => {
+              const shippingFee = shipping.method === 'express' ? 9.99 : 0;
+              const subtotal = cartTotal;
+              const grandTotal = subtotal + shippingFee;
+              const fmt = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '€';
+              return [
+                { label: t.subtotal, value: fmt(subtotal) },
+                { label: t.shippingCost, value: shippingFee === 0 ? t.free : fmt(shippingFee) },
+                { label: t.total, value: fmt(grandTotal), bold: true },
+              ].map(row => (
+                <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#888', fontWeight: row.bold ? 600 : 400 }}>{row.label}</span>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: row.bold ? '#1a0a0a' : '#666', fontWeight: row.bold ? 600 : 400 }}>{row.value}</span>
+                </div>
+              ));
+            })()}
           </div>
         </div>
       </div>
