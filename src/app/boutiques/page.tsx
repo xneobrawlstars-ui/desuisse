@@ -78,7 +78,7 @@ export default function BoutiquesPage() {
       image: '/images/boutique-4.jpg',
     },
     {
-      name: 'DeSuisse',
+      name: 'deSuisse',
       address: 'Eliot Engell 25, 30000 Pejë',
       phone: '+383 48 233 400',
       email: 'info@desuisse.com',
