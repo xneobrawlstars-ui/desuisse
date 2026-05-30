@@ -128,7 +128,7 @@ export default function LoadingTestPage() {
         {/* On dark background variant */}
         <div style={{ marginTop: 40, background: '#1a0a0a', border: '1px solid #2a1a1a', padding: '60px 32px' }}>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c9a84c', fontWeight: 700, marginBottom: 24, textAlign: 'center' }}>
-            On dark background
+            On dark background — same gold strokes, transparent fill
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <RingBoxLoader size={140} label={showLabel ? 'Loading' : undefined} />
@@ -142,13 +142,16 @@ export default function LoadingTestPage() {
           </p>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <li style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#555', lineHeight: 1.8 }}>
-              • The animation cycles every 3 seconds: closed → opening → diamond visible → closing → closed.
+              • 2D line-art engagement ring, gold strokes on transparent background — looks right on any background colour.
             </li>
             <li style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#555', lineHeight: 1.8 }}>
-              • Pure SVG and CSS — no image files, no JavaScript animation library. Lightweight and crisp at any size.
+              • The ring gently floats up and down on a 4-second cycle.
             </li>
             <li style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#555', lineHeight: 1.8 }}>
-              • The diamond has a moving sparkle effect to add life.
+              • The diamond has two sparkle effects: a heart-glow that pulses, and a small star that traverses the facets.
+            </li>
+            <li style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#555', lineHeight: 1.8 }}>
+              • Pure SVG — no images, no JavaScript animation library, scales cleanly at any size.
             </li>
             <li style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#555', lineHeight: 1.8 }}>
               • When you delete this test page after launch, the loader still works automatically on page transitions via <code style={{ background: '#fff', padding: '2px 6px', fontSize: 12 }}>src/app/loading.tsx</code>.
