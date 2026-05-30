@@ -5,6 +5,7 @@ import { LanguageProvider } from '@/lib/LanguageContext';
 import { WishlistProvider } from '@/lib/WishlistContext';
 import { CartProvider } from '@/lib/CartContext';
 import CartDrawer from '@/components/CartDrawer';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 // next/font self-hosts the fonts at build time — they ship with your deployment,
 // so they ALWAYS load (no third-party DNS, no FOIT, works on every device).
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </CartProvider>
           </WishlistProvider>
         </LanguageProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
