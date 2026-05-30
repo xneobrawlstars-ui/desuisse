@@ -9,6 +9,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DEFAULT_PRODUCTS, Product } from '@/data/products';
 import { kvGetJson, kvSetJson, isUpstashConfigured } from '@/lib/upstash';
 import { authenticateRequest } from '@/lib/session';
+import { maybeCreateMonthlySnapshot, logActivity } from '@/lib/backup';
+import { getClientIp } from '@/lib/rateLimit';
 
 const KV_KEY = 'ds:products';
 const MAX_PRODUCTS = 2000;          // sanity cap on payload size
@@ -82,6 +84,19 @@ export async function POST(req: NextRequest) {
       error: 'Could not write to database. Check Vercel logs for [upstash] errors.',
     }, { status: 502 });
   }
+
+  // Side effects, best-effort. Snapshot is only taken if there isn't already
+  // one for the current month (so saves don't pile up snapshots) — admins
+  // can take a manual snapshot any time from the admin panel before
+  // big edits.
+  const action = (req.headers.get('x-ds-action') as 'save' | 'restore' | 'import' | 'reset') || 'save';
+  maybeCreateMonthlySnapshot(products).catch(err => console.error('[products] snapshot failed:', err));
+  logActivity({
+    timestamp: Date.now(),
+    action,
+    productCount: products.length,
+    ip: getClientIp(req),
+  }).catch(err => console.error('[products] logActivity failed:', err));
 
   return NextResponse.json({ success: true, count: products.length }, { status: 200 });
 }

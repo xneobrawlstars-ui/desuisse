@@ -45,9 +45,17 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCat, setFilterCat] = useState('all');
   const [saved, setSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState<'products' | 'images'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'images' | 'backups'>('products');
   const [siteImages, setSiteImages] = useState<SiteImages>(DEFAULT_SITE_IMAGES);
   const [imagesSaved, setImagesSaved] = useState(false);
+
+  // Backup tab state
+  interface SnapshotMeta { id: string; createdAt: number; productCount: number; kind: 'auto' | 'manual'; }
+  interface ActivityEntry { timestamp: number; action: string; productCount: number; ip: string; note?: string; }
+  const [snapshots, setSnapshots] = useState<SnapshotMeta[]>([]);
+  const [activity, setActivity] = useState<ActivityEntry[]>([]);
+  const [backupsLoading, setBackupsLoading] = useState(false);
+  const [restoreStatus, setRestoreStatus] = useState('');
 
   // ── Check server-side session on mount ──
   // We probe a protected endpoint with a no-op POST. If it returns 401 we
@@ -146,6 +154,150 @@ export default function AdminPage() {
       await fetch('/api/admin-logout', { method: 'POST', credentials: 'same-origin' });
     } catch { /* ignore */ }
     setIsLoggedIn(false);
+  };
+
+  // ── Backup tab helpers ─────────────────────────────────────────────
+
+  /** Load the snapshot list and activity log from the server. */
+  const loadBackups = async () => {
+    setBackupsLoading(true);
+    try {
+      const [snapsRes, activityRes] = await Promise.all([
+        fetch('/api/backups', { credentials: 'same-origin', cache: 'no-store' }),
+        fetch('/api/activity-log', { credentials: 'same-origin', cache: 'no-store' }),
+      ]);
+      if (snapsRes.ok)    setSnapshots(await snapsRes.json());
+      if (activityRes.ok) setActivity(await activityRes.json());
+    } catch (err) {
+      console.error('Failed to load backups:', err);
+    } finally {
+      setBackupsLoading(false);
+    }
+  };
+
+  // Load backups when the tab opens
+  useEffect(() => {
+    if (activeTab === 'backups' && isLoggedIn) loadBackups();
+  }, [activeTab, isLoggedIn]);
+
+  /** Download all current products as a JSON file. Client-side, no server roundtrip. */
+  const handleExport = () => {
+    const json = JSON.stringify(products, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `desuisse-products-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  /** Import products from a JSON file the user picks. Confirms before overwriting. */
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // reset so the same file can be re-picked
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const parsed = JSON.parse(reader.result as string);
+        if (!Array.isArray(parsed)) {
+          alert('That file does not look like a products backup (expected an array).');
+          return;
+        }
+        const valid = parsed.filter(isValidProduct);
+        if (valid.length === 0) {
+          alert('No valid products found in that file.');
+          return;
+        }
+        const msg = `Import will REPLACE all ${products.length} current products with ${valid.length} products from the file.\n\n` +
+                    'A snapshot will be saved automatically so you can roll back if needed.\n\n' +
+                    'Continue?';
+        if (!confirm(msg)) return;
+
+        // POST to products with an action header so it's logged as 'import'
+        const res = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-ds-action': 'import' },
+          credentials: 'same-origin',
+          body: JSON.stringify(valid),
+        });
+        if (!res.ok) {
+          alert('Import failed. Check the browser console.');
+          return;
+        }
+        setProducts(valid);
+        await loadBackups();
+        alert(`✓ Imported ${valid.length} products successfully.`);
+      } catch (err) {
+        alert('Could not read that file. Make sure it is a valid JSON backup.\n\n' + String(err));
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  /** Restore a specific snapshot to live products. */
+  const handleRestore = async (snapshotId: string, snapshotProductCount: number) => {
+    const msg =
+      `Restore will REPLACE all ${products.length} current products with the ${snapshotProductCount} products from this snapshot.\n\n` +
+      'A new snapshot of the current state is saved first, so you can undo by restoring that.\n\n' +
+      'Continue?';
+    if (!confirm(msg)) return;
+    setRestoreStatus('Restoring…');
+    try {
+      const res = await fetch('/api/backups/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ id: snapshotId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setRestoreStatus('❌ ' + (err.error || 'Restore failed'));
+        return;
+      }
+      const data = await res.json();
+      setRestoreStatus(`✓ Restored ${data.count} products`);
+      // Refresh live product list and snapshot list
+      const fresh = await fetchProducts();
+      setProducts(fresh);
+      await loadBackups();
+      setTimeout(() => setRestoreStatus(''), 4000);
+    } catch (err) {
+      setRestoreStatus('❌ Network error');
+      console.error(err);
+    }
+  };
+
+  /** Download a specific snapshot as a JSON file. */
+  const handleDownloadSnapshot = (snapshotId: string) => {
+    // Use a plain anchor so the browser handles the Content-Disposition header
+    window.open(`/api/backups?id=${encodeURIComponent(snapshotId)}`, '_blank');
+  };
+
+  /** Trigger a manual snapshot of the current live products on the server. */
+  const handleCreateSnapshot = async () => {
+    setRestoreStatus(language === 'sq' ? 'Duke krijuar snapshot…' : 'Creating snapshot…');
+    try {
+      const res = await fetch('/api/backups/snapshot', {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setRestoreStatus('❌ ' + (err.error || 'Snapshot failed'));
+        return;
+      }
+      const data = await res.json();
+      setRestoreStatus(`✓ ${language === 'sq' ? 'Snapshot u krijua' : 'Snapshot created'} (${data.count})`);
+      await loadBackups();
+      setTimeout(() => setRestoreStatus(''), 4000);
+    } catch (err) {
+      setRestoreStatus('❌ Network error');
+      console.error(err);
+    }
   };
 
   const startAdd = () => {
@@ -434,7 +586,7 @@ export default function AdminPage() {
         {/* Tab bar */}
         <div style={{ background: '#fff', borderBottom: '1px solid #e8e0d4', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 0 }}>
           <div style={{ display: 'flex' }}>
-            {(['products', 'images'] as const).map(tab => (
+            {(['products', 'images', 'backups'] as const).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)} style={{
                 padding: '18px 24px', background: 'none', border: 'none',
                 borderBottom: `2px solid ${activeTab === tab ? '#c9a84c' : 'transparent'}`,
@@ -442,7 +594,11 @@ export default function AdminPage() {
                 color: activeTab === tab ? '#1a0a0a' : '#888', cursor: 'pointer',
                 letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.2s',
               }}>
-                {tab === 'products' ? `${t.admin.products} (${products.length})` : (language === 'sq' ? 'Fotot e Faqes' : 'Site Images')}
+                {tab === 'products'
+                  ? `${t.admin.products} (${products.length})`
+                  : tab === 'images'
+                    ? (language === 'sq' ? 'Fotot e Faqes' : 'Site Images')
+                    : (language === 'sq' ? 'Backup & Aktiviteti' : 'Backups & Activity')}
               </button>
             ))}
           </div>
@@ -537,6 +693,183 @@ export default function AdminPage() {
             >
               {language === 'sq' ? 'RUAJ FOTOT' : 'SAVE IMAGES'}
             </button>
+          </div>
+        )}
+
+        {/* ── BACKUPS & ACTIVITY TAB ── */}
+        {activeTab === 'backups' && (
+          <div style={{ padding: '32px', maxWidth: 1000 }}>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#888', marginBottom: 28, lineHeight: 1.75 }}>
+              {language === 'sq'
+                ? 'Snapshot-et automatikë merren një herë në muaj (jo për çdo ndryshim, për të kursyer hapësirën). Mund të krijoni edhe një snapshot manualisht përpara ndryshimeve të mëdha. Mund të shkarkoni gjithashtu të gjitha produktet si JSON për t\u2019i ruajtur lokalisht.'
+                : 'Automatic snapshots are taken once per month (not per save — saves storage). You can also create a manual snapshot any time before a big edit. Or download all products as JSON to keep a local copy.'}
+            </p>
+
+            {/* Export / Import / Snapshot section */}
+            <div style={{ background: '#fff', border: '1px solid #e8e0d4', padding: '24px 28px', marginBottom: 32 }}>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 400, color: '#1a0a0a', marginBottom: 6 }}>
+                {language === 'sq' ? 'Veprime' : 'Actions'}
+              </h3>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#999', marginBottom: 18 }}>
+                {language === 'sq'
+                  ? `${products.length} produkte aktualisht.`
+                  : `${products.length} products currently.`}
+              </p>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <button onClick={handleExport} className="btn-dark" style={{ padding: '12px 24px', fontSize: 10 }}>
+                  ↓ {language === 'sq' ? 'EKSPORTO (skedar JSON)' : 'EXPORT (JSON file)'}
+                </button>
+                <label style={{ padding: '12px 24px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', border: '1px solid #1a0a0a', cursor: 'pointer', fontFamily: 'var(--font-sans)', color: '#1a0a0a', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  ↑ {language === 'sq' ? 'IMPORTO' : 'IMPORT'}
+                  <input type="file" accept="application/json" onChange={handleImport} style={{ display: 'none' }} />
+                </label>
+                <button onClick={handleCreateSnapshot} style={{ padding: '12px 24px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: '1px solid #c9a84c', color: '#c9a84c', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                  ◆ {language === 'sq' ? 'KRIJO SNAPSHOT TANI' : 'CREATE SNAPSHOT NOW'}
+                </button>
+              </div>
+            </div>
+
+            {/* Snapshots section */}
+            <div style={{ background: '#fff', border: '1px solid #e8e0d4', marginBottom: 32 }}>
+              <div style={{ padding: '20px 28px', borderBottom: '1px solid #f0ebe3', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 400, color: '#1a0a0a' }}>
+                    {language === 'sq' ? 'Snapshot-et' : 'Snapshots'}
+                  </h3>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#888', marginTop: 4 }}>
+                    {language === 'sq' ? 'Auto: 1 në muaj, deri në 12 të ruajtur. Manual: deri në 10 të ruajtur.' : 'Auto: 1 per month, up to 12 kept. Manual: up to 10 kept.'}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  {restoreStatus && (
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: restoreStatus.startsWith('❌') ? '#c0392b' : '#27ae60' }}>
+                      {restoreStatus}
+                    </span>
+                  )}
+                  <button onClick={loadBackups} style={{ padding: '6px 14px', fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', background: 'transparent', border: '1px solid #e8e0d4', color: '#666', cursor: 'pointer' }}>
+                    ↻ {language === 'sq' ? 'Përditëso' : 'Refresh'}
+                  </button>
+                </div>
+              </div>
+
+              {backupsLoading ? (
+                <p style={{ padding: '24px 28px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#aaa' }}>Loading…</p>
+              ) : snapshots.length === 0 ? (
+                <p style={{ padding: '24px 28px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#aaa' }}>
+                  {language === 'sq' ? 'Asnjë snapshot ende. Krijoni një manualisht ose ruani disa produkte.' : 'No snapshots yet. Create one manually, or save some products.'}
+                </p>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#fafaf8' }}>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, color: '#888', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        {language === 'sq' ? 'Krijuar' : 'Created'}
+                      </th>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, color: '#888', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        {language === 'sq' ? 'Lloji' : 'Type'}
+                      </th>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, color: '#888', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        {language === 'sq' ? 'Produkte' : 'Products'}
+                      </th>
+                      <th style={{ padding: '12px 20px', textAlign: 'right', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, color: '#888', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        {language === 'sq' ? 'Veprime' : 'Actions'}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {snapshots.map(s => (
+                      <tr key={s.id} style={{ borderTop: '1px solid #f0ebe3' }}>
+                        <td style={{ padding: '14px 20px', fontFamily: 'var(--font-sans)', fontSize: 13, color: '#1a0a0a' }}>
+                          {new Date(s.createdAt).toLocaleString(language === 'sq' ? 'sq-AL' : 'en-GB', {
+                            day: '2-digit', month: 'short', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit',
+                          })}
+                        </td>
+                        <td style={{ padding: '14px 20px' }}>
+                          <span style={{
+                            display: 'inline-block', padding: '3px 9px',
+                            fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                            fontFamily: 'var(--font-sans)',
+                            background: s.kind === 'manual' ? '#fef5e0' : '#e7f3ff',
+                            color:      s.kind === 'manual' ? '#a07820' : '#1565c0',
+                          }}>{s.kind === 'manual' ? (language === 'sq' ? 'Manual' : 'Manual') : (language === 'sq' ? 'Auto' : 'Auto')}</span>
+                        </td>
+                        <td style={{ padding: '14px 20px', fontFamily: 'var(--font-sans)', fontSize: 13, color: '#666' }}>
+                          {s.productCount}
+                        </td>
+                        <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                          <button onClick={() => handleDownloadSnapshot(s.id)} style={{ marginRight: 12, padding: '6px 14px', fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', background: 'transparent', border: '1px solid #e8e0d4', color: '#666', cursor: 'pointer' }}>
+                            ↓ {language === 'sq' ? 'Shkarko' : 'Download'}
+                          </button>
+                          <button onClick={() => handleRestore(s.id, s.productCount)} style={{ padding: '6px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', background: '#1a0a0a', border: '1px solid #1a0a0a', color: '#fff', cursor: 'pointer' }}>
+                            {language === 'sq' ? 'Rivendos' : 'Restore'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Activity log */}
+            <div style={{ background: '#fff', border: '1px solid #e8e0d4' }}>
+              <div style={{ padding: '20px 28px', borderBottom: '1px solid #f0ebe3' }}>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 400, color: '#1a0a0a' }}>
+                  {language === 'sq' ? 'Aktiviteti i Fundit' : 'Recent Activity'}
+                </h3>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#888', marginTop: 4 }}>
+                  {language === 'sq' ? 'Veprimet e fundit në panelin e adminit (50 të fundit).' : 'Recent admin actions (last 50).'}
+                </p>
+              </div>
+              {activity.length === 0 ? (
+                <p style={{ padding: '24px 28px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#aaa' }}>
+                  {language === 'sq' ? 'Nuk ka aktivitet ende.' : 'No activity yet.'}
+                </p>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#fafaf8' }}>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, color: '#888', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        {language === 'sq' ? 'Kur' : 'When'}
+                      </th>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, color: '#888', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        {language === 'sq' ? 'Veprimi' : 'Action'}
+                      </th>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, color: '#888', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        {language === 'sq' ? 'Numri' : 'Count'}
+                      </th>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, color: '#888', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        IP
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activity.map((a, i) => (
+                      <tr key={i} style={{ borderTop: '1px solid #f0ebe3' }}>
+                        <td style={{ padding: '14px 20px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1a0a0a' }}>
+                          {new Date(a.timestamp).toLocaleString(language === 'sq' ? 'sq-AL' : 'en-GB', {
+                            day: '2-digit', month: 'short', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit',
+                          })}
+                        </td>
+                        <td style={{ padding: '14px 20px', fontFamily: 'var(--font-sans)', fontSize: 12 }}>
+                          <span style={{
+                            display: 'inline-block', padding: '3px 9px',
+                            fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                            background: a.action === 'restore' ? '#fef5e0' : a.action === 'import' ? '#e7f3ff' : '#f0ebe3',
+                            color: a.action === 'restore' ? '#a07820' : a.action === 'import' ? '#1565c0' : '#666',
+                          }}>{a.action}</span>
+                          {a.note && <span style={{ marginLeft: 10, fontSize: 11, color: '#888' }}>{a.note}</span>}
+                        </td>
+                        <td style={{ padding: '14px 20px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#666' }}>{a.productCount}</td>
+                        <td style={{ padding: '14px 20px', fontFamily: 'var(--font-sans)', fontSize: 11, color: '#999' }}>{a.ip}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         )}
 
