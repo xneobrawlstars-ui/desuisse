@@ -1,23 +1,25 @@
 'use client';
 /**
- * Loading animation: a 2D line-art engagement ring with a sparkling
- * round-brilliant diamond.
+ * Loading animation: a ring box that opens, with the engagement ring
+ * popping up from inside, then the lid closes. Loops.
  *
- * Why this approach (after a failed attempt at a 3D ring box):
- *  - SVG can't fake 3D box-opening convincingly in 2D
- *  - Transparent line-art on no background is more elegant and
- *    matches the site's luxury aesthetic
- *  - The ring is the icon of the brand; no need for a box
- *  - Side-view: thin band as an oval, large diamond crown above
+ * Structure (matches the user's design intent):
+ *  - The box base stays still throughout (burgundy #1a0a0a)
+ *  - The lid is hinged at its BOTTOM-LEFT corner and rotates open
+ *    (~-80deg from rest), then back to closed
+ *  - When the box is open, the ring rises up from inside the box
+ *    (translates up and fades in), then settles back down when the
+ *    lid closes
  *
- * The animation:
- *  - The ring gently floats up and down (subtle, 4s cycle)
- *  - A sparkle traverses across the diamond's facets (1.6s cycle)
- *  - The diamond facets brighten and dim slightly (creates the
- *    "fire" effect a real diamond has under moving light)
+ * Brand styling:
+ *  - Burgundy box (#1a0a0a), gold trim (#c9a84c)
+ *  - Gold ring band with a proper round-brilliant diamond on top
+ *  - The diamond has multiple facets and a moving sparkle
+ *  - Brand fonts/colors throughout
  *
- * All strokes are gold (#c9a84c) on transparent background, so the
- * loader looks right whether placed on light or dark backgrounds.
+ * Built using CSS keyframe animations (rather than SVG SMIL) because
+ * CSS animations have more consistent cross-browser support for
+ * transform-origin rotations.
  */
 import { CSSProperties } from 'react';
 
@@ -50,160 +52,140 @@ export default function RingBoxLoader({
         padding: 40,
       };
 
-  // Brand gold for all strokes — looks elegant on any background
-  const GOLD = '#c9a84c';
-  const GOLD_FAINT = '#e1c987';
-
   return (
     <div style={containerStyle} role="status" aria-live="polite">
+      {/* Inline styles for keyframe animations.
+          Keys are namespaced (ds-loader-) so they don't clash with the
+          rest of the app's CSS. */}
+      <style>{`
+        .ds-loader-lid {
+          /* Hinge at bottom-left corner of the lid */
+          transform-origin: 25px 60px;
+          animation: ds-loader-open 2.6s infinite ease-in-out;
+        }
+        .ds-loader-ring {
+          transform-origin: 50px 55px;
+          animation: ds-loader-pop 2.6s infinite ease-in-out;
+        }
+        .ds-loader-sparkle {
+          animation: ds-loader-sparkle 1.4s infinite ease-in-out;
+          transform-origin: center;
+        }
+        @keyframes ds-loader-open {
+          0%, 12%  { transform: rotate(0deg); }
+          45%, 75% { transform: rotate(-85deg); }
+          95%, 100% { transform: rotate(0deg); }
+        }
+        @keyframes ds-loader-pop {
+          0%, 18%   { transform: translateY(14px); opacity: 0; }
+          45%, 72%  { transform: translateY(0px);  opacity: 1; }
+          90%, 100% { transform: translateY(14px); opacity: 0; }
+        }
+        @keyframes ds-loader-sparkle {
+          0%, 100% { opacity: 0; transform: scale(0.6); }
+          50%      { opacity: 1; transform: scale(1.2); }
+        }
+      `}</style>
+
       <svg
-        width={size}
-        height={size}
-        viewBox="0 0 120 120"
+        viewBox="0 0 100 100"
+        style={{ width: size, height: size, overflow: 'visible' }}
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
-        style={{ display: 'block' }}
-        fill="none"
       >
-        {/* ─────────────────────────────────────────────────────────
-            FLOATING GROUP — the entire ring drifts up/down gently.
-            ────────────────────────────────────────────────────── */}
-        <g>
-          <animateTransform
-            attributeName="transform"
-            type="translate"
-            values="0 0; 0 -3; 0 0; 0 2; 0 0"
-            keyTimes="0; 0.25; 0.5; 0.75; 1"
-            dur="4s"
-            repeatCount="indefinite"
-            calcMode="spline"
-            keySplines="0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1"
-          />
+        {/* ── BOX INTERIOR (the dark slot the ring sits in) ── */}
+        <rect x="25" y="55" width="50" height="15" fill="#0a0303" />
+        {/* Cream satin lining strip at the top of the slot */}
+        <rect x="25" y="55" width="50" height="2" fill="#f0e6d6" />
 
-          {/* ─── RING BAND ───
-              A thin oval, viewed slightly tilted forward.
-              Two ellipses give it the "circular when seen at an angle" look. */}
-          <ellipse
-            cx="60" cy="82"
-            rx="20" ry="14"
-            stroke={GOLD}
-            strokeWidth="1.5"
-          />
-          {/* Inner highlight: thin lighter line just inside, suggesting
-              the rounded inner edge of the band */}
-          <ellipse
-            cx="60" cy="82"
-            rx="18.2" ry="12.5"
-            stroke={GOLD_FAINT}
-            strokeWidth="0.5"
-            opacity="0.7"
-          />
+        {/* ── RING ── animated to pop up from inside */}
+        <g className="ds-loader-ring">
+          {/* Gold band — circle */}
+          <circle cx="50" cy="55" r="11" fill="none" stroke="#c9a84c" strokeWidth="2.2" />
+          {/* Inner highlight on band */}
+          <circle cx="50" cy="55" r="9.5" fill="none" stroke="#e1c987" strokeWidth="0.5" opacity="0.6" />
 
-          {/* ─── PRONG SETTING ───
-              Four small claws rising from the ring up to the diamond. */}
-          <line x1="52" y1="70" x2="50" y2="62" stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
-          <line x1="68" y1="70" x2="70" y2="62" stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
-          <line x1="58" y1="68" x2="56.5" y2="58" stroke={GOLD} strokeWidth="0.8" strokeLinecap="round" />
-          <line x1="62" y1="68" x2="63.5" y2="58" stroke={GOLD} strokeWidth="0.8" strokeLinecap="round" />
+          {/* Prongs holding the diamond */}
+          <line x1="45" y1="46" x2="44" y2="40" stroke="#c9a84c" strokeWidth="1.2" strokeLinecap="round" />
+          <line x1="55" y1="46" x2="56" y2="40" stroke="#c9a84c" strokeWidth="1.2" strokeLinecap="round" />
 
-          {/* ─── DIAMOND ───
-              A round-brilliant cut viewed from the side:
-                • Top half (crown): trapezoid with table on top
-                • Bottom half (pavilion): triangle pointing down
-                • All facet lines visible
-              Stroked in gold for consistency. */}
-          <g transform="translate(60 48)">
-            {/* GIRDLE — widest horizontal line of the diamond */}
-            <line x1="-20" y1="0" x2="20" y2="0" stroke={GOLD} strokeWidth="1.3" />
+          {/* DIAMOND — round-brilliant cut, side view */}
+          <g>
+            {/* Crown (upper trapezoid) */}
+            <polygon
+              points="38,40 62,40 56,30 44,30"
+              fill="#f5faff"
+              stroke="#c9a84c"
+              strokeWidth="0.8"
+              strokeLinejoin="round"
+            />
+            {/* Table (flat top) */}
+            <polygon
+              points="44,30 56,30 54,32 46,32"
+              fill="#ffffff"
+              stroke="#c9a84c"
+              strokeWidth="0.4"
+            />
+            {/* Pavilion (lower triangle pointing down) */}
+            <polygon
+              points="38,40 62,40 50,52"
+              fill="#dbe7f0"
+              stroke="#c9a84c"
+              strokeWidth="0.8"
+              strokeLinejoin="round"
+            />
 
-            {/* CROWN (upper trapezoid) — sloping facets */}
-            <line x1="-20" y1="0" x2="-14" y2="-12" stroke={GOLD} strokeWidth="1.3" />
-            <line x1="20"  y1="0" x2="14"  y2="-12" stroke={GOLD} strokeWidth="1.3" />
-            <line x1="-14" y1="-12" x2="14" y2="-12" stroke={GOLD} strokeWidth="1.3" />
+            {/* Crown facet lines */}
+            <line x1="44" y1="30" x2="42" y2="40" stroke="#c9a84c" strokeWidth="0.4" opacity="0.8" />
+            <line x1="56" y1="30" x2="58" y2="40" stroke="#c9a84c" strokeWidth="0.4" opacity="0.8" />
+            <line x1="50" y1="30" x2="50" y2="40" stroke="#c9a84c" strokeWidth="0.4" opacity="0.5" />
 
-            {/* TABLE (flat top facet) — slightly inset within the crown */}
-            <line x1="-9"  y1="-12" x2="-7"  y2="-15" stroke={GOLD_FAINT} strokeWidth="0.7" />
-            <line x1="9"   y1="-12" x2="7"   y2="-15" stroke={GOLD_FAINT} strokeWidth="0.7" />
+            {/* Pavilion facet lines */}
+            <line x1="42" y1="40" x2="50" y2="52" stroke="#c9a84c" strokeWidth="0.4" opacity="0.6" />
+            <line x1="58" y1="40" x2="50" y2="52" stroke="#c9a84c" strokeWidth="0.4" opacity="0.6" />
+            <line x1="50" y1="40" x2="50" y2="52" stroke="#c9a84c" strokeWidth="0.4" opacity="0.4" />
 
-            {/* CROWN STAR FACETS — internal lines */}
-            <line x1="-14" y1="-12" x2="-7"  y2="-2" stroke={GOLD_FAINT} strokeWidth="0.6" />
-            <line x1="14"  y1="-12" x2="7"   y2="-2" stroke={GOLD_FAINT} strokeWidth="0.6" />
-            <line x1="0"   y1="-12" x2="0"   y2="-4" stroke={GOLD_FAINT} strokeWidth="0.6" />
+            {/* Bright highlight on crown — gives the diamond its life */}
+            <ellipse cx="47" cy="33" rx="2" ry="0.6" fill="#ffffff" opacity="0.9" />
 
-            {/* CROWN MAIN FACETS — V shapes from girdle */}
-            <line x1="-10" y1="0" x2="-5" y2="-12" stroke={GOLD_FAINT} strokeWidth="0.6" />
-            <line x1="10"  y1="0" x2="5"  y2="-12" stroke={GOLD_FAINT} strokeWidth="0.6" />
-
-            {/* PAVILION (lower triangle) — diamond points down */}
-            <line x1="-20" y1="0" x2="0" y2="22" stroke={GOLD} strokeWidth="1.3" />
-            <line x1="20"  y1="0" x2="0" y2="22" stroke={GOLD} strokeWidth="1.3" />
-
-            {/* PAVILION FACET LINES — give the bottom its depth */}
-            <line x1="-13" y1="0" x2="0" y2="22" stroke={GOLD_FAINT} strokeWidth="0.6" />
-            <line x1="13"  y1="0" x2="0" y2="22" stroke={GOLD_FAINT} strokeWidth="0.6" />
-            <line x1="-6"  y1="0" x2="0" y2="22" stroke={GOLD_FAINT} strokeWidth="0.6" />
-            <line x1="6"   y1="0" x2="0" y2="22" stroke={GOLD_FAINT} strokeWidth="0.6" />
-
-            {/* ─── DIAMOND SHIMMER ───
-                A glow that grows and shrinks at the diamond's heart,
-                creating the "fire" you see when a real diamond catches light. */}
-            <circle cx="0" cy="-6" r="2" fill={GOLD} opacity="0">
-              <animate
-                attributeName="opacity"
-                values="0; 0.8; 0; 0.5; 0"
-                keyTimes="0; 0.3; 0.55; 0.75; 1"
-                dur="2s"
-                repeatCount="indefinite"
-              />
-              <animate
-                attributeName="r"
-                values="0.5; 3; 0.5; 2; 0.5"
-                keyTimes="0; 0.3; 0.55; 0.75; 1"
-                dur="2s"
-                repeatCount="indefinite"
-              />
-            </circle>
-
-            {/* ─── TRAVELING SPARKLE ───
-                A small 4-pointed star that drifts across the diamond. */}
-            <g>
-              <animateTransform
-                attributeName="transform"
-                type="translate"
-                values="-12 -8; 12 -6; -8 -4; -12 -8"
-                keyTimes="0; 0.4; 0.8; 1"
-                dur="2.4s"
-                repeatCount="indefinite"
-              />
-              <animate
-                attributeName="opacity"
-                values="0; 1; 1; 0; 0; 1; 0"
-                keyTimes="0; 0.15; 0.35; 0.5; 0.6; 0.8; 1"
-                dur="2.4s"
-                repeatCount="indefinite"
-              />
+            {/* Sparkle — a small twinkle on the diamond */}
+            <g className="ds-loader-sparkle">
               <path
-                d="M 0 -3 L 0.6 -0.6 L 3 0 L 0.6 0.6 L 0 3 L -0.6 0.6 L -3 0 L -0.6 -0.6 Z"
-                fill={GOLD}
+                d="M 53 31 L 53.5 32.5 L 55 33 L 53.5 33.5 L 53 35 L 52.5 33.5 L 51 33 L 52.5 32.5 Z"
+                fill="#ffffff"
               />
             </g>
           </g>
+        </g>
 
-          {/* ─── SECOND SPARKLE — outside the diamond, faint ───
-              Adds life to the surrounding area. */}
-          <g opacity="0">
-            <animate
-              attributeName="opacity"
-              values="0; 0; 0.7; 0; 0"
-              keyTimes="0; 0.5; 0.6; 0.7; 1"
-              dur="3s"
-              repeatCount="indefinite"
-            />
-            <path
-              d="M 86 40 L 86.4 41.6 L 88 42 L 86.4 42.4 L 86 44 L 85.6 42.4 L 84 42 L 85.6 41.6 Z"
-              fill={GOLD_FAINT}
-            />
-          </g>
+        {/* ── BOX BASE (front face of the box, always visible) ── */}
+        <rect x="25" y="60" width="50" height="25" rx="2" fill="#1a0a0a" stroke="#c9a84c" strokeWidth="0.6" />
+        {/* Subtle gradient suggestion — slightly darker bottom */}
+        <rect x="25" y="78" width="50" height="7" rx="2" fill="#0a0303" opacity="0.5" />
+        {/* Gold trim along bottom edge */}
+        <rect x="27" y="82" width="46" height="0.8" fill="#c9a84c" opacity="0.7" />
+
+        {/* ── LID ── hinged at bottom-left, rotates open ── */}
+        <g className="ds-loader-lid">
+          {/* Main lid body — slightly curved top */}
+          <path
+            d="M 25 60 L 75 60 L 75 48 Q 50 38 25 48 Z"
+            fill="#1a0a0a"
+            stroke="#c9a84c"
+            strokeWidth="0.6"
+          />
+          {/* Inner edge of lid where it meets the box (slightly lighter) */}
+          <path
+            d="M 25 60 L 75 60 L 75 58 Q 50 56 25 58 Z"
+            fill="#0a0303"
+          />
+          {/* Subtle highlight along the top curve of the lid */}
+          <path
+            d="M 28 47 Q 50 39 72 47"
+            fill="none"
+            stroke="rgba(255,255,255,0.05)"
+            strokeWidth="0.5"
+          />
         </g>
       </svg>
 
