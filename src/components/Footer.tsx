@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 
 const FB_URL    = 'https://www.facebook.com/artdesuisse?locale=cs_CZ';
@@ -44,7 +43,6 @@ function SocialBar({ language }: { language: string }) {
 
 export default function Footer() {
   const { t, language } = useLanguage();
-  const [email, setEmail] = useState('');
 
   return (
     <footer className="site-footer" style={{ padding: '64px 0 0' }}>
@@ -74,10 +72,10 @@ export default function Footer() {
           {/* Help */}
           <div>
             <p className="footer-title">{t.footer.help}</p>
-            <Link href="/shipping"  className="footer-link">{t.footer.shipping}</Link>
-            <Link href="/warranty"  className="footer-link">{t.footer.warranty}</Link>
-            <Link href="/faq"       className="footer-link">{t.footer.faq}</Link>
-            <Link href="/contact"   className="footer-link">{t.footer.contact}</Link>
+            <Link href="/shipping"   className="footer-link">{t.footer.shipping}</Link>
+            <Link href="/returns"    className="footer-link">{language === 'sq' ? 'Kthimet' : 'Returns'}</Link>
+            <Link href="/faq"        className="footer-link">{t.footer.faq}</Link>
+            <Link href="/contact"    className="footer-link">{t.footer.contact}</Link>
             <Link href="/ring-sizer" className="footer-link">{language === 'sq' ? 'Matësi i Unazës' : 'Ring Sizer'}</Link>
           </div>
 
@@ -88,22 +86,16 @@ export default function Footer() {
             <Link href="/boutiques"      className="footer-link">{language === 'sq' ? 'Boutique-t' : 'Boutiques'}</Link>
             <Link href="/custom-design"  className="footer-link">{language === 'sq' ? 'Dizajn i Personalizuar' : 'Custom Design'}</Link>
             <Link href="/ring-story"     className="footer-link">{language === 'sq' ? 'Historia e Unazës' : 'Ring Story'}</Link>
-            <Link href="/contact"        className="footer-link">{t.footer.contact}</Link>
+            <Link href="/reviews"        className="footer-link">{language === 'sq' ? 'Vlerësime' : 'Reviews'}</Link>
           </div>
 
-          {/* Newsletter */}
+          {/* Legal */}
           <div>
-            <p className="footer-title">{t.footer.newsletter}</p>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#888', lineHeight: 1.7, marginBottom: 16 }}>
-              {t.footer.newsletterSub}
-            </p>
-            <div style={{ display: 'flex', gap: 0, flexWrap: 'wrap' }}>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder={t.footer.newsletterPlaceholder}
-                style={{ flex: '1 1 180px', minWidth: 0, padding: '10px 14px', border: '1px solid #333', background: '#111', color: '#fff', fontFamily: 'var(--font-sans)', fontSize: 12, outline: 'none' }}
-              />
-              <button className="btn-gold" style={{ padding: '10px 18px', fontSize: 10, whiteSpace: 'nowrap', flexShrink: 0 }}>{t.footer.subscribe}</button>
-            </div>
+            <p className="footer-title">{language === 'sq' ? 'Ligjor' : 'Legal'}</p>
+            <Link href="/privacy"  className="footer-link">{language === 'sq' ? 'Politika e Privatësisë' : 'Privacy Policy'}</Link>
+            <Link href="/terms"    className="footer-link">{language === 'sq' ? 'Kushtet e Përdorimit' : 'Terms of Service'}</Link>
+            <Link href="/shipping" className="footer-link">{t.footer.shipping}</Link>
+            <Link href="/returns"  className="footer-link">{language === 'sq' ? 'Kthimet' : 'Returns'}</Link>
           </div>
         </div>
 

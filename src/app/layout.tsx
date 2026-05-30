@@ -5,6 +5,8 @@ import { LanguageProvider } from '@/lib/LanguageContext';
 import { WishlistProvider } from '@/lib/WishlistContext';
 import { CartProvider } from '@/lib/CartContext';
 import CartDrawer from '@/components/CartDrawer';
+import CookieBanner from '@/components/CookieBanner';
+import WhatsAppButton from '@/components/WhatsAppButton';
 
 // next/font self-hosts the fonts at build time — they ship with your deployment,
 // so they ALWAYS load (no third-party DNS, no FOIT, works on every device).
@@ -25,13 +27,40 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://desuisse.com'),
-  title: { default: 'deSuisse — Luxury Jewellery', template: '%s — deSuisse' },
-  description: 'Luxury jewellery from deSuisse. Rings, earrings, bracelets and necklaces crafted with passion.',
+  title: {
+    default: 'deSuisse — Luxury Jewellery from Karlovy Vary & Pejë',
+    template: '%s — deSuisse',
+  },
+  description:
+    'deSuisse: luxury jewellery handcrafted with passion. Engagement rings, wedding bands, earrings, bracelets and bespoke pieces. Boutiques in Karlovy Vary and Pejë.',
+  keywords: [
+    'luxury jewellery', 'engagement rings', 'wedding rings',
+    'diamond rings', 'fine jewellery', 'Karlovy Vary jewellery',
+    'Pejë jewellery', 'Kosovo jewellery', 'bespoke jewellery', 'deSuisse',
+  ],
+  authors: [{ name: 'deSuisse Luxury Jewellery' }],
+  creator: 'deSuisse',
+  publisher: 'deSuisse',
+  alternates: { canonical: 'https://desuisse.com' },
   openGraph: {
     title: 'deSuisse — Luxury Jewellery',
-    description: 'Luxury jewellery from deSuisse.',
+    description:
+      'Engagement rings, wedding bands, and bespoke fine jewellery. Boutiques in Karlovy Vary and Pejë.',
     type: 'website',
     url: 'https://desuisse.com',
+    siteName: 'deSuisse',
+    locale: 'en_GB',
+    images: [{
+      url: '/images/desuisse-logo.png',
+      width: 1200,
+      height: 630,
+      alt: 'deSuisse Luxury Jewellery',
+    }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'deSuisse — Luxury Jewellery',
+    description: 'Engagement rings, wedding bands, and bespoke fine jewellery.',
     images: ['/images/desuisse-logo.png'],
   },
   icons: {
@@ -39,7 +68,21 @@ export const metadata: Metadata = {
       { url: '/images/desuisse-logo.png', type: 'image/png' },
     ],
   },
-  robots: { index: true, follow: true },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
@@ -51,15 +94,68 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+// Structured data for Google: helps it understand we're a real business
+// with physical locations. This shows up in Google Maps and rich results.
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'JewelryStore',
+  name: 'deSuisse Luxury Jewellery',
+  url: 'https://desuisse.com',
+  logo: 'https://desuisse.com/images/desuisse-logo.png',
+  description:
+    'Luxury jewellery boutique. Engagement rings, wedding bands, earrings, bracelets and bespoke pieces.',
+  email: 'info@desuisse.com',
+  telephone: '+38348233400',
+  priceRange: '€€€',
+  location: [
+    {
+      '@type': 'Place',
+      name: 'deSuisse Pejë',
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: 'Eliot Engell 25',
+        addressLocality: 'Pejë',
+        postalCode: '30000',
+        addressCountry: 'XK',
+      },
+    },
+    {
+      '@type': 'Place',
+      name: 'Art de Suisse I',
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: 'Stará Louka 335/48',
+        addressLocality: 'Karlovy Vary',
+        postalCode: '360 01',
+        addressCountry: 'CZ',
+      },
+    },
+  ],
+  sameAs: [
+    // Add your social profiles here when ready:
+    // 'https://www.instagram.com/desuisse',
+    // 'https://www.facebook.com/desuisse',
+  ],
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${cormorant.variable} ${montserrat.variable}`}>
+      <head>
+        {/* Structured data for Google rich results */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      </head>
       <body>
         <LanguageProvider>
           <WishlistProvider>
             <CartProvider>
               {children}
               <CartDrawer />
+              <WhatsAppButton />
+              <CookieBanner />
             </CartProvider>
           </WishlistProvider>
         </LanguageProvider>

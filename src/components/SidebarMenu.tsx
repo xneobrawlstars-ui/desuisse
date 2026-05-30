@@ -137,6 +137,7 @@ export default function SidebarMenu({ open, onClose }: Props) {
           {/* Standalone links */}
           <TopLink href="/custom-design" label={t.customDesign} />
           <TopLink href="/ring-story" label={t.ringStory} />
+          <TopLink href="/reviews" label={language === 'sq' ? 'Vlerësime' : 'Reviews'} />
           <TopLink href="/faq" label={t.faq} />
 
           {/* deSuisse (About) */}
