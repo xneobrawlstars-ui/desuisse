@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useWishlist } from '@/lib/WishlistContext';
 import { useCart } from '@/lib/CartContext';
+import { useUser } from '@/lib/UserContext';
 import SearchOverlay from './SearchOverlay';
 import SidebarMenu from './SidebarMenu';
 
@@ -13,6 +14,7 @@ export default function Header() {
   const { t, language, setLanguage, mounted } = useLanguage();
   const { count: wishlistCount } = useWishlist();
   const { count: cartCount, setDrawerOpen } = useCart();
+  const { currentUser, status } = useUser();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -105,6 +107,24 @@ export default function Header() {
                   <span style={{ position: 'absolute', top: -6, right: -7, background: '#c9a84c', color: '#1a0a0a', borderRadius: '50%', width: 15, height: 15, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)' }}>
                     {wishlistCount}
                   </span>
+                )}
+              </Link>
+
+              {/* Account — links to dashboard if signed in, otherwise sign-in page */}
+              <Link
+                href={status === 'signed-in' ? '/account/dashboard' : '/account'}
+                className="header-icon-btn"
+                style={{ position: 'relative', textDecoration: 'none', color: 'inherit' }}
+                aria-label={language === 'sq' ? 'Llogaria' : 'Account'}
+                title={status === 'signed-in' && currentUser ? currentUser.name : (language === 'sq' ? 'Hyni në llogarinë tuaj' : 'Sign in to your account')}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                {/* Tiny gold dot if signed in */}
+                {status === 'signed-in' && (
+                  <span style={{ position: 'absolute', top: -2, right: -3, background: '#c9a84c', borderRadius: '50%', width: 6, height: 6 }} />
                 )}
               </Link>
 

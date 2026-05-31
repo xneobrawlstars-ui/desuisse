@@ -7,6 +7,7 @@ import { CartProvider } from '@/lib/CartContext';
 import CartDrawer from '@/components/CartDrawer';
 import CookieBanner from '@/components/CookieBanner';
 import WhatsAppButton from '@/components/WhatsAppButton';
+import { UserProvider } from '@/lib/UserContext';
 
 // next/font self-hosts the fonts at build time — they ship with your deployment,
 // so they ALWAYS load (no third-party DNS, no FOIT, works on every device).
@@ -150,14 +151,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <LanguageProvider>
-          <WishlistProvider>
-            <CartProvider>
-              {children}
-              <CartDrawer />
-              <WhatsAppButton />
-              <CookieBanner />
-            </CartProvider>
-          </WishlistProvider>
+          <UserProvider>
+            <WishlistProvider>
+              <CartProvider>
+                {children}
+                <CartDrawer />
+                <WhatsAppButton />
+                <CookieBanner />
+              </CartProvider>
+            </WishlistProvider>
+          </UserProvider>
         </LanguageProvider>
       </body>
     </html>
