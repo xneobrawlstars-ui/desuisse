@@ -32,9 +32,8 @@ function shell(opts: { title: string; preheader?: string; bodyHtml: string }): s
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;max-width:560px;border:1px solid #e8e0d4;">
         <!-- Header -->
-        <tr><td style="padding:32px 40px;text-align:center;border-bottom:1px solid #f0ebe3;">
-          <p style="margin:0;font-family:Georgia,serif;font-size:28px;font-style:italic;color:${BRAND.burgundy};letter-spacing:0.02em;">deSuisse</p>
-          <p style="margin:6px 0 0;font-family:Arial,sans-serif;font-size:9px;letter-spacing:0.3em;color:${BRAND.gold};">LUXURY JEWELLERY</p>
+        <tr><td style="padding:32px 40px 28px;text-align:center;border-bottom:1px solid #f0ebe3;background:#fff;">
+          <img src="https://desuisse.com/images/desuisse-logo.png" alt="deSuisse" width="180" style="display:block;margin:0 auto;max-width:180px;height:auto;border:0;" />
         </td></tr>
         <!-- Body -->
         <tr><td style="padding:40px;">

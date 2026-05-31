@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
     }, { status: 201 });
   }
 
-  const verifyUrl = `${getBaseUrl(req)}/account/verify?token=${encodeURIComponent(token)}`;
+  const verifyUrl = `${getBaseUrl(req)}/api/auth/verify?token=${encodeURIComponent(token)}`;
   const email_ = verificationEmail({ name: user.name, verifyUrl, language });
   const sent = await sendEmail({ to: user.email, subject: email_.subject, html: email_.html });
 
