@@ -12,6 +12,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import PasswordInput from '@/components/PasswordInput';
 import { useLanguage } from '@/lib/LanguageContext';
 
 function ResetContent() {
@@ -39,6 +40,8 @@ function ResetContent() {
     noToken: 'Kjo faqe pret një lidhje për rivendosjen e fjalëkalimit nga emaili juaj.',
     successMsg: 'Fjalëkalimi u rivendos. Po ju ridrejtojmë te hyrja…',
     passwordHelp: 'Të paktën 8 karaktere, përfshirë një shkronjë dhe një numër.',
+    showPw: 'Shfaq fjalëkalimin',
+    hidePw: 'Fshih fjalëkalimin',
   } : {
     eyebrow: '◆ New Password',
     title: 'Set a new password',
@@ -51,6 +54,8 @@ function ResetContent() {
     noToken: 'This page expects a password-reset link from your email.',
     successMsg: 'Password reset. Redirecting to sign-in…',
     passwordHelp: 'At least 8 characters, including a letter and a number.',
+    showPw: 'Show password',
+    hidePw: 'Hide password',
   };
 
   if (!token) {
@@ -98,12 +103,30 @@ function ResetContent() {
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#666', lineHeight: 1.8, marginBottom: 24 }}>{t.intro}</p>
 
           <div style={{ marginBottom: 18 }}>
-            <label htmlFor="reset-password" style={{ display: 'block', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#888', marginBottom: 8 }}>{t.password}</label>
-            <input id="reset-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} style={{ width: '100%', padding: '13px 16px', border: '1px solid #e8e0d4', background: '#fff', fontFamily: 'var(--font-sans)', fontSize: 14, color: '#1a0a0a', boxSizing: 'border-box' }} autoComplete="new-password" />
+            <PasswordInput
+              id="reset-password"
+              label={t.password}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              minLength={8}
+              autoComplete="new-password"
+              showLabel={t.showPw}
+              hideLabel={t.hidePw}
+            />
           </div>
           <div style={{ marginBottom: 8 }}>
-            <label htmlFor="reset-confirm" style={{ display: 'block', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#888', marginBottom: 8 }}>{t.confirm}</label>
-            <input id="reset-confirm" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required minLength={8} style={{ width: '100%', padding: '13px 16px', border: '1px solid #e8e0d4', background: '#fff', fontFamily: 'var(--font-sans)', fontSize: 14, color: '#1a0a0a', boxSizing: 'border-box' }} autoComplete="new-password" />
+            <PasswordInput
+              id="reset-confirm"
+              label={t.confirm}
+              value={confirm}
+              onChange={e => setConfirm(e.target.value)}
+              required
+              minLength={8}
+              autoComplete="new-password"
+              showLabel={t.showPw}
+              hideLabel={t.hidePw}
+            />
           </div>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#aaa', marginBottom: 22, lineHeight: 1.6 }}>{t.passwordHelp}</p>
 

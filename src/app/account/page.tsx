@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import PasswordInput from '@/components/PasswordInput';
 import { useUser } from '@/lib/UserContext';
 import { useLanguage } from '@/lib/LanguageContext';
 
@@ -30,6 +31,7 @@ export default function AccountPage() {
     signup: 'Krijoni llogari',
     email: 'Adresa e emailit',
     password: 'Fjalëkalimi',
+    confirmPassword: 'Konfirmoni fjalëkalimin',
     name: 'Emri i plotë',
     signinBtn: 'Hyni',
     signupBtn: 'Krijoni llogari',
@@ -40,6 +42,9 @@ export default function AccountPage() {
     passwordHelp: 'Të paktën 8 karaktere, përfshirë një shkronjë dhe një numër.',
     checkInbox: 'Llogaria u krijua. Ju lutemi kontrolloni inbox-in tuaj për të verifikuar adresën e emailit.',
     submitting: 'Duke procesuar…',
+    mismatch: 'Fjalëkalimet nuk përputhen',
+    showPw: 'Shfaq fjalëkalimin',
+    hidePw: 'Fshih fjalëkalimin',
   } : {
     eyebrow: '◆ Account',
     title: 'Your Account',
@@ -47,6 +52,7 @@ export default function AccountPage() {
     signup: 'Create Account',
     email: 'Email address',
     password: 'Password',
+    confirmPassword: 'Confirm password',
     name: 'Full name',
     signinBtn: 'Sign In',
     signupBtn: 'Create Account',
@@ -57,6 +63,9 @@ export default function AccountPage() {
     passwordHelp: 'At least 8 characters, including a letter and a number.',
     checkInbox: 'Account created. Please check your inbox to verify your email address.',
     submitting: 'Processing…',
+    mismatch: 'Passwords do not match',
+    showPw: 'Show password',
+    hidePw: 'Hide password',
   };
 
   return (
@@ -191,8 +200,16 @@ function SignInForm({ onSubmit, t }: SignInProps) {
         <input id="signin-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle()} autoComplete="email" />
       </div>
       <div style={{ marginBottom: 22 }}>
-        <label style={labelStyle()} htmlFor="signin-password">{t.password}</label>
-        <input id="signin-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle()} autoComplete="current-password" />
+        <PasswordInput
+          id="signin-password"
+          label={t.password}
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+          autoComplete="current-password"
+          showLabel={t.showPw}
+          hideLabel={t.hidePw}
+        />
       </div>
       {error && (
         <p style={{ color: '#c0392b', fontFamily: 'var(--font-sans)', fontSize: 12, marginBottom: 16, padding: '10px 14px', background: '#fef0ee', border: '1px solid #f5d4d0' }}>
@@ -201,7 +218,7 @@ function SignInForm({ onSubmit, t }: SignInProps) {
       )}
       {needsVerification && (
         <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#888', marginBottom: 16 }}>
-          (If you didn't receive the verification email, please contact info@desuisse.com)
+          (If you didn&apos;t receive the verification email, please contact info@desuisse.com)
         </p>
       )}
       <button type="submit" disabled={submitting} style={{ ...buttonStyle(), opacity: submitting ? 0.6 : 1 }}>
@@ -225,6 +242,7 @@ interface SignUpProps {
 function SignUpForm({ onSubmit, t, language }: SignUpProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -232,12 +250,16 @@ function SignUpForm({ onSubmit, t, language }: SignUpProps) {
 
   const handle = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(''); setSuccess(''); setSubmitting(true);
+    setError(''); setSuccess('');
+    // Check password match BEFORE submitting — avoids a useless network round-trip
+    // and a flash of "Processing…" when the customer just mistyped.
+    if (password !== confirmPassword) { setError(t.mismatch); return; }
+    setSubmitting(true);
     const result = await onSubmit(email, password, name, language);
     setSubmitting(false);
     if (!result.ok) { setError(result.error); return; }
     setSuccess(result.message || t.checkInbox);
-    setEmail(''); setPassword(''); setName('');
+    setEmail(''); setPassword(''); setConfirmPassword(''); setName('');
   };
 
   return (
@@ -260,9 +282,31 @@ function SignUpForm({ onSubmit, t, language }: SignUpProps) {
         <label style={labelStyle()} htmlFor="signup-email">{t.email}</label>
         <input id="signup-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle()} autoComplete="email" />
       </div>
+      <div style={{ marginBottom: 18 }}>
+        <PasswordInput
+          id="signup-password"
+          label={t.password}
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+          minLength={8}
+          autoComplete="new-password"
+          showLabel={t.showPw}
+          hideLabel={t.hidePw}
+        />
+      </div>
       <div style={{ marginBottom: 8 }}>
-        <label style={labelStyle()} htmlFor="signup-password">{t.password}</label>
-        <input id="signup-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} style={inputStyle()} autoComplete="new-password" />
+        <PasswordInput
+          id="signup-confirm-password"
+          label={t.confirmPassword}
+          value={confirmPassword}
+          onChange={e => setConfirmPassword(e.target.value)}
+          required
+          minLength={8}
+          autoComplete="new-password"
+          showLabel={t.showPw}
+          hideLabel={t.hidePw}
+        />
       </div>
       <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#aaa', marginBottom: 22, lineHeight: 1.6 }}>
         {t.passwordHelp}
